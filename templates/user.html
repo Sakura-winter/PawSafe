@@ -1,0 +1,835 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+	<meta charset="UTF-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1.0">
+	<title>PawSafe Profile</title>
+	<link href="https://fonts.googleapis.com/css2?family=Fraunces:wght@700;900&family=DM+Sans:wght@400;500;700&display=swap" rel="stylesheet">
+	<style>
+		:root {
+			--cream: #faf6f0;
+			--warm: #f5ecd8;
+			--bark: #3d2b1f;
+			--bark-light: #6b4a36;
+			--rust: #c0502a;
+			--sage: #5c7a5a;
+			--sky: #4a7fa5;
+			--card-bg: #fffdf9;
+			--border: #e8ddd0;
+			--radius: 18px;
+		}
+
+		* { box-sizing: border-box; }
+
+		body {
+			margin: 0;
+			font-family: 'DM Sans', sans-serif;
+			background: radial-gradient(circle at 10% 0%, #fff4dd 0, var(--cream) 40%), var(--cream);
+			color: var(--bark);
+			min-height: 100vh;
+		}
+
+		nav {
+			position: sticky;
+			top: 0;
+			z-index: 30;
+			display: flex;
+			justify-content: space-between;
+			align-items: center;
+			padding: 12px 18px;
+			border-bottom: 1px solid var(--border);
+			background: rgba(250, 246, 240, 0.95);
+			backdrop-filter: blur(10px);
+		}
+
+		.logo {
+			display: flex;
+			align-items: center;
+			gap: 10px;
+			font-family: 'Fraunces', serif;
+			font-size: 1.35rem;
+			font-weight: 900;
+		}
+
+		.logo-badge {
+			width: 34px;
+			height: 34px;
+			border-radius: 50% 50% 50% 8px;
+			background: var(--rust);
+			border: 2px solid var(--bark);
+			display: flex;
+			align-items: center;
+			justify-content: center;
+			color: #fff;
+		}
+
+		.logo span { color: var(--rust); }
+
+		.nav-actions { display: flex; gap: 8px; }
+
+		.btn {
+			border: 2px solid var(--bark);
+			border-radius: 11px;
+			background: var(--warm);
+			color: var(--bark);
+			font-weight: 700;
+			padding: 8px 12px;
+			cursor: pointer;
+			box-shadow: 2px 2px 0 var(--bark);
+			text-decoration: none;
+		}
+
+		.btn.rust { background: var(--rust); color: #fff; }
+
+		.page {
+			max-width: 980px;
+			margin: 0 auto;
+			padding: 20px 14px 40px;
+		}
+
+		.profile {
+			background: var(--card-bg);
+			border: 1px solid var(--border);
+			border-radius: 22px;
+			box-shadow: 3px 3px 0 var(--border);
+			padding: 18px;
+			margin-bottom: 14px;
+		}
+
+		.profile-top {
+			display: grid;
+			grid-template-columns: 130px 1fr;
+			gap: 16px;
+			align-items: center;
+		}
+
+		.avatar {
+			width: 120px;
+			height: 120px;
+			border-radius: 50%;
+			border: 3px solid var(--bark);
+			background: linear-gradient(135deg, #ffd3bf, #ffe7c2);
+			display: flex;
+			align-items: center;
+			justify-content: center;
+			font-family: 'Fraunces', serif;
+			font-size: 2.2rem;
+			font-weight: 900;
+		}
+
+		.profile-user {
+			display: flex;
+			align-items: center;
+			gap: 8px;
+			flex-wrap: wrap;
+			margin-bottom: 10px;
+		}
+
+		.profile-user h1 {
+			margin: 0;
+			font-family: 'Fraunces', serif;
+			font-size: 1.8rem;
+		}
+
+		.stats {
+			display: flex;
+			gap: 16px;
+			margin-bottom: 10px;
+			flex-wrap: wrap;
+		}
+
+		.stat {
+			font-size: 0.95rem;
+			color: var(--bark-light);
+		}
+
+		.stat strong {
+			color: var(--bark);
+			font-size: 1rem;
+		}
+
+		.bio {
+			font-size: 0.9rem;
+			color: var(--bark-light);
+			line-height: 1.5;
+		}
+
+		.highlights {
+			margin-top: 16px;
+			display: flex;
+			gap: 12px;
+			overflow-x: auto;
+			padding-bottom: 2px;
+		}
+
+		.highlight {
+			min-width: 84px;
+			text-align: center;
+			cursor: pointer;
+		}
+
+		.highlight-ring {
+			width: 74px;
+			height: 74px;
+			margin: 0 auto 6px;
+			border-radius: 50%;
+			background: linear-gradient(135deg, var(--rust), #f4b391);
+			padding: 3px;
+			position: relative;
+		}
+
+		.highlight-inner {
+			width: 100%;
+			height: 100%;
+			border-radius: 50%;
+			background: var(--card-bg);
+			border: 2px solid var(--border);
+			display: flex;
+			align-items: center;
+			justify-content: center;
+			font-size: 1.7rem;
+		}
+
+		.story-count {
+			position: absolute;
+			right: -4px;
+			bottom: -2px;
+			background: var(--bark);
+			color: #fff;
+			font-size: 0.7rem;
+			border-radius: 999px;
+			min-width: 20px;
+			padding: 2px 6px;
+			font-weight: 700;
+			border: 2px solid var(--card-bg);
+		}
+
+		.highlight-name {
+			font-size: 0.8rem;
+			white-space: nowrap;
+			overflow: hidden;
+			text-overflow: ellipsis;
+		}
+
+		.composer {
+			background: var(--card-bg);
+			border: 1px solid var(--border);
+			border-radius: 22px;
+			box-shadow: 3px 3px 0 var(--border);
+			padding: 14px;
+			margin-bottom: 14px;
+		}
+
+		.composer h3 {
+			margin: 0 0 8px;
+			font-family: 'Fraunces', serif;
+			font-size: 1.2rem;
+		}
+
+		textarea, input, select {
+			width: 100%;
+			border: 1px solid var(--border);
+			border-radius: 12px;
+			padding: 10px 12px;
+			background: var(--warm);
+			font-family: inherit;
+			font-size: 0.9rem;
+			outline: none;
+			color: var(--bark);
+		}
+
+		textarea:focus, input:focus, select:focus { border-color: var(--rust); }
+
+		.composer-row {
+			display: grid;
+			grid-template-columns: 1fr 170px 170px;
+			gap: 8px;
+			margin-top: 8px;
+		}
+
+		.upload {
+			border: 2px dashed var(--sage);
+			border-radius: 12px;
+			padding: 11px;
+			text-align: center;
+			color: var(--sage);
+			font-weight: 700;
+			margin-top: 8px;
+			background: #eef7ee;
+			cursor: pointer;
+		}
+
+		.preview {
+			margin-top: 8px;
+			border-radius: 12px;
+			border: 1px solid var(--border);
+			overflow: hidden;
+		}
+
+		.tabs {
+			background: var(--card-bg);
+			border: 1px solid var(--border);
+			border-radius: 22px;
+			box-shadow: 3px 3px 0 var(--border);
+			overflow: hidden;
+		}
+
+		.tab-head {
+			display: grid;
+			grid-template-columns: 1fr 1fr;
+			border-bottom: 1px solid var(--border);
+		}
+
+		.tab-btn {
+			border: 0;
+			border-bottom: 3px solid transparent;
+			background: transparent;
+			padding: 12px;
+			font-weight: 700;
+			color: var(--bark-light);
+			cursor: pointer;
+		}
+
+		.tab-btn.active {
+			color: var(--bark);
+			border-bottom-color: var(--rust);
+			background: var(--warm);
+		}
+
+		.grid {
+			display: grid;
+			grid-template-columns: repeat(3, 1fr);
+			gap: 8px;
+			padding: 10px;
+		}
+
+		.tile {
+			border-radius: 14px;
+			min-height: 170px;
+			border: 1px solid var(--border);
+			background: var(--warm);
+			overflow: hidden;
+			position: relative;
+		}
+
+		.tile img {
+			width: 100%;
+			height: 100%;
+			object-fit: cover;
+			display: block;
+		}
+
+		.tile-content {
+			padding: 12px;
+			font-size: 0.88rem;
+			line-height: 1.4;
+		}
+
+		.tile-badge {
+			position: absolute;
+			top: 8px;
+			right: 8px;
+			font-size: 0.7rem;
+			font-weight: 700;
+			border-radius: 999px;
+			padding: 3px 8px;
+			background: rgba(61, 43, 31, 0.85);
+			color: #fff;
+		}
+
+		.empty {
+			grid-column: 1 / -1;
+			padding: 40px 12px;
+			text-align: center;
+			color: var(--bark-light);
+		}
+
+		.modal-overlay {
+			position: fixed;
+			inset: 0;
+			background: rgba(61, 43, 31, 0.55);
+			z-index: 60;
+			display: flex;
+			align-items: center;
+			justify-content: center;
+			opacity: 0;
+			pointer-events: none;
+			transition: opacity 0.2s;
+			padding: 14px;
+		}
+
+		.modal-overlay.show {
+			opacity: 1;
+			pointer-events: all;
+		}
+
+		.modal {
+			width: 100%;
+			max-width: 520px;
+			background: var(--card-bg);
+			border-radius: 20px;
+			border: 2px solid var(--bark);
+			box-shadow: 4px 4px 0 var(--bark);
+			overflow: hidden;
+		}
+
+		.modal-head {
+			display: flex;
+			justify-content: space-between;
+			align-items: center;
+			padding: 14px;
+			border-bottom: 1px solid var(--border);
+			font-family: 'Fraunces', serif;
+			font-size: 1.15rem;
+			font-weight: 900;
+		}
+
+		.modal-body {
+			padding: 14px;
+			max-height: 70vh;
+			overflow: auto;
+			display: flex;
+			flex-direction: column;
+			gap: 10px;
+		}
+
+		.story-card {
+			border: 1px solid var(--border);
+			border-radius: 12px;
+			background: var(--warm);
+			overflow: hidden;
+		}
+
+		.story-card img {
+			width: 100%;
+			max-height: 250px;
+			object-fit: cover;
+			display: block;
+		}
+
+		.story-info {
+			padding: 10px;
+			font-size: 0.86rem;
+			color: var(--bark-light);
+		}
+
+		.hidden { display: none; }
+
+		@media (max-width: 780px) {
+			.profile-top { grid-template-columns: 1fr; justify-items: center; text-align: center; }
+			.stats { justify-content: center; }
+			.composer-row { grid-template-columns: 1fr; }
+			.grid { grid-template-columns: repeat(2, 1fr); }
+		}
+	</style>
+</head>
+<body>
+<nav>
+	<div class="logo">
+		<div class="logo-badge">🐾</div>
+		Paw<span>Safe</span>
+	</div>
+	<div class="nav-actions">
+		<a class="btn" href="/accounts/dashboard/">Dashboard</a>
+		<button class="btn rust" type="button" onclick="openProfilePostComposer()">+ New Post</button>
+	</div>
+</nav>
+
+<main class="page">
+	<section class="profile">
+		<div class="profile-top">
+			<div class="avatar" id="profileAvatar">U</div>
+			<div>
+				<div class="profile-user">
+					<h1 id="profileUsername"></h1>
+					<span style="font-size:0.78rem;font-weight:700;color:var(--sage);">Pet Parent</span>
+				</div>
+				<div class="stats">
+					<div class="stat"><strong id="statPosts">0</strong> posts</div>
+					<div class="stat"><strong id="statPets">0</strong> pets</div>
+					<div class="stat"><strong id="statStories">0</strong> stories</div>
+				</div>
+				<div class="bio" id="profileBio"></div>
+			</div>
+		</div>
+
+		<div class="highlights" id="petHighlights"></div>
+	</section>
+
+	<section class="composer" id="profileComposer" style="display:none;">
+		<h3>Create New Post</h3>
+		<textarea id="newPostText" rows="3" placeholder="Share an update for your profile"></textarea>
+		<div class="upload" onclick="document.getElementById('newPostFile').click()">Upload photo (optional)</div>
+		<input id="newPostFile" class="hidden" type="file" accept="image/*" onchange="previewProfilePost(event)">
+		<div id="newPostPreviewWrap" class="preview hidden">
+			<img id="newPostPreview" alt="New post preview">
+		</div>
+		<div class="composer-row">
+			<select id="newPostPetTag"></select>
+			<select id="newPostType">
+				<option value="text">Update</option>
+				<option value="photo">Photo</option>
+			</select>
+			<button class="btn rust" type="button" onclick="publishProfilePost()">Publish</button>
+		</div>
+	</section>
+
+	<section class="tabs">
+		<div class="tab-head">
+			<button class="tab-btn active" type="button" onclick="setTab('posts', this)">Posts</button>
+			<button class="tab-btn" type="button" onclick="setTab('activity', this)">Lost/Found</button>
+		</div>
+		<div id="profileGrid" class="grid"></div>
+	</section>
+</main>
+
+<div class="modal-overlay" id="highlightModal" onclick="closeHighlightModalOutside(event)">
+	<div class="modal">
+		<div class="modal-head">
+			<span id="highlightTitle">Pet Highlight</span>
+			<button class="btn" type="button" onclick="closeHighlightModal()">Close</button>
+		</div>
+		<div class="modal-body">
+			<div class="upload" onclick="document.getElementById('storyFile').click()">Upload story image</div>
+			<input id="storyFile" class="hidden" type="file" accept="image/*" onchange="previewStory(event)">
+			<div id="storyPreviewWrap" class="preview hidden">
+				<img id="storyPreview" alt="Story preview">
+			</div>
+			<textarea id="storyCaption" rows="2" placeholder="Story caption"></textarea>
+			<button class="btn rust" type="button" onclick="saveStory()">Save Story</button>
+			<div id="storyList"></div>
+		</div>
+	</div>
+</div>
+
+<script>
+	const APP_USER = "{{ user.username|default:'User'|escapejs }}";
+	const DASHBOARD_KEY = `pawsafe_dashboard_${APP_USER}`;
+	const HIGHLIGHTS_KEY = `pawsafe_highlights_${APP_USER}`;
+
+	let activeTab = 'posts';
+	let selectedPetForHighlight = null;
+	let dashboardState = null;
+	let highlights = {};
+	let profilePostPreview = '';
+	let storyPreview = '';
+
+	function escapeHtml(v) {
+		return String(v || '')
+			.replace(/&/g, '&amp;')
+			.replace(/</g, '&lt;')
+			.replace(/>/g, '&gt;')
+			.replace(/\"/g, '&quot;')
+			.replace(/'/g, '&#39;');
+	}
+
+	function initials(name) {
+		const p = String(name || 'U').trim().split(/\s+/).filter(Boolean);
+		return p.slice(0, 2).map(x => x[0].toUpperCase()).join('') || 'U';
+	}
+
+	function ago(iso) {
+		const d = new Date(iso).getTime();
+		if (!d) return 'just now';
+		const sec = Math.max(1, Math.floor((Date.now() - d) / 1000));
+		if (sec < 60) return `${sec}s ago`;
+		const min = Math.floor(sec / 60);
+		if (min < 60) return `${min}m ago`;
+		const hr = Math.floor(min / 60);
+		if (hr < 24) return `${hr}h ago`;
+		return `${Math.floor(hr / 24)}d ago`;
+	}
+
+	function defaultDashboardState() {
+		return {
+			nextId: 1,
+			pets: [],
+			posts: []
+		};
+	}
+
+	function loadData() {
+		try {
+			dashboardState = JSON.parse(localStorage.getItem(DASHBOARD_KEY) || 'null') || defaultDashboardState();
+		} catch (e) {
+			dashboardState = defaultDashboardState();
+		}
+
+		try {
+			highlights = JSON.parse(localStorage.getItem(HIGHLIGHTS_KEY) || '{}') || {};
+		} catch (e) {
+			highlights = {};
+		}
+	}
+
+	function saveDashboard() {
+		localStorage.setItem(DASHBOARD_KEY, JSON.stringify(dashboardState));
+	}
+
+	function saveHighlightsState() {
+		localStorage.setItem(HIGHLIGHTS_KEY, JSON.stringify(highlights));
+	}
+
+	function renderProfileHeader() {
+		document.getElementById('profileUsername').textContent = APP_USER;
+		document.getElementById('profileAvatar').textContent = initials(APP_USER);
+		document.getElementById('profileBio').textContent = `${APP_USER} on PawSafe. Tracking pets, posting updates, and helping reunite lost companions.`;
+
+		const myPosts = dashboardState.posts.filter(post => post.author === APP_USER);
+		const storyCount = Object.values(highlights).reduce((acc, items) => acc + (Array.isArray(items) ? items.length : 0), 0);
+
+		document.getElementById('statPosts').textContent = String(myPosts.length);
+		document.getElementById('statPets').textContent = String(dashboardState.pets.length);
+		document.getElementById('statStories').textContent = String(storyCount);
+	}
+
+	function renderHighlights() {
+		const wrap = document.getElementById('petHighlights');
+		const pets = dashboardState.pets;
+
+		if (!pets.length) {
+			wrap.innerHTML = '<div class="highlight"><div class="highlight-ring"><div class="highlight-inner">+</div></div><div class="highlight-name">Add pets from dashboard</div></div>';
+			return;
+		}
+
+		wrap.innerHTML = pets.map(pet => {
+			const count = Array.isArray(highlights[String(pet.id)]) ? highlights[String(pet.id)].length : 0;
+			return `
+				<div class="highlight" onclick="openHighlightModal(${pet.id})">
+					<div class="highlight-ring">
+						<div class="highlight-inner">${escapeHtml(pet.emoji || '🐾')}</div>
+						<div class="story-count">${count}</div>
+					</div>
+					<div class="highlight-name">${escapeHtml(pet.name)}</div>
+				</div>
+			`;
+		}).join('');
+
+		const petTag = document.getElementById('newPostPetTag');
+		petTag.innerHTML = '<option value="">Tag pet</option>' + pets.map(pet => `<option value="${pet.id}">${escapeHtml(pet.emoji || '🐾')} ${escapeHtml(pet.name)}</option>`).join('');
+	}
+
+	function openProfilePostComposer() {
+		const composer = document.getElementById('profileComposer');
+		composer.style.display = composer.style.display === 'none' ? 'block' : 'none';
+	}
+
+	function previewProfilePost(event) {
+		const file = event.target.files[0];
+		if (!file) return;
+		const reader = new FileReader();
+		reader.onload = e => {
+			profilePostPreview = e.target.result;
+			document.getElementById('newPostPreview').src = profilePostPreview;
+			document.getElementById('newPostPreviewWrap').classList.remove('hidden');
+		};
+		reader.readAsDataURL(file);
+	}
+
+	function publishProfilePost() {
+		const text = document.getElementById('newPostText').value.trim();
+		const petId = Number(document.getElementById('newPostPetTag').value) || null;
+		const selectedType = document.getElementById('newPostType').value;
+		const type = profilePostPreview || selectedType === 'photo' ? 'photo' : 'text';
+
+		if (!text && !profilePostPreview) {
+			alert('Add text or photo for the post.');
+			return;
+		}
+
+		const post = {
+			id: Number(dashboardState.nextId || 1),
+			type,
+			author: APP_USER,
+			petId,
+			text,
+			imageData: profilePostPreview,
+			likes: 0,
+			comments: 0,
+			createdAt: new Date().toISOString()
+		};
+
+		dashboardState.nextId = post.id + 1;
+		dashboardState.posts.push(post);
+		saveDashboard();
+
+		document.getElementById('newPostText').value = '';
+		document.getElementById('newPostFile').value = '';
+		document.getElementById('newPostType').value = 'text';
+		document.getElementById('newPostPetTag').value = '';
+		document.getElementById('newPostPreviewWrap').classList.add('hidden');
+		profilePostPreview = '';
+
+		renderProfileHeader();
+		renderPostGrid();
+	}
+
+	function setTab(tab, button) {
+		activeTab = tab;
+		document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
+		button.classList.add('active');
+		renderPostGrid();
+	}
+
+	function tileBadge(type) {
+		if (type === 'photo') return 'Photo';
+		if (type === 'lost') return 'Lost';
+		if (type === 'found') return 'Found';
+		return 'Update';
+	}
+
+	function tileBody(post) {
+		if (post.type === 'photo' && post.imageData) {
+			return `<img src="${post.imageData}" alt="post image">`;
+		}
+
+		if (post.type === 'lost') {
+			if (Array.isArray(post.lostImages) && post.lostImages.length) {
+				return `<img src="${post.lostImages[0]}" alt="lost pet image">`;
+			}
+			return `<div class="tile-content" style="background:#faeee8;height:100%;"><strong>Missing ${escapeHtml(post.lostName || '')}</strong><br>${escapeHtml(post.lostLocation || '')}</div>`;
+		}
+
+		if (post.type === 'found') {
+			if (Array.isArray(post.foundImages) && post.foundImages.length) {
+				return `<img src="${post.foundImages[0]}" alt="found pet image">`;
+			}
+			return `<div class="tile-content" style="background:#edf5ed;height:100%;"><strong>Found ${escapeHtml(post.foundSpecies || 'pet')}</strong><br>${escapeHtml(post.foundLocation || '')}</div>`;
+		}
+
+		if (post.type === 'photo') {
+			return `<div class="tile-content" style="height:100%;display:flex;align-items:center;justify-content:center;font-size:3rem;">🐾</div>`;
+		}
+
+		return `<div class="tile-content">${escapeHtml(post.text || '')}</div>`;
+	}
+
+	function renderPostGrid() {
+		const grid = document.getElementById('profileGrid');
+		let myPosts = dashboardState.posts.filter(post => post.author === APP_USER);
+
+		if (activeTab === 'posts') {
+			myPosts = myPosts.filter(post => post.type === 'text' || post.type === 'photo');
+		} else {
+			myPosts = myPosts.filter(post => post.type === 'lost' || post.type === 'found');
+		}
+
+		if (!myPosts.length) {
+			grid.innerHTML = '<div class="empty">No posts in this section yet.</div>';
+			return;
+		}
+
+		grid.innerHTML = myPosts.slice().reverse().map(post => `
+			<article class="tile" title="${escapeHtml(post.text || '')}">
+				${tileBody(post)}
+				<div class="tile-badge">${tileBadge(post.type)}</div>
+			</article>
+		`).join('');
+	}
+
+	function openHighlightModal(petId) {
+		selectedPetForHighlight = petId;
+		const pet = dashboardState.pets.find(item => item.id === petId);
+		document.getElementById('highlightTitle').textContent = pet ? `${pet.name} Highlights` : 'Pet Highlights';
+		document.getElementById('highlightModal').classList.add('show');
+		renderStoryList();
+	}
+
+	function closeHighlightModal() {
+		document.getElementById('highlightModal').classList.remove('show');
+		storyPreview = '';
+		document.getElementById('storyFile').value = '';
+		document.getElementById('storyCaption').value = '';
+		document.getElementById('storyPreviewWrap').classList.add('hidden');
+	}
+
+	function closeHighlightModalOutside(event) {
+		if (event.target.id === 'highlightModal') {
+			closeHighlightModal();
+		}
+	}
+
+	function previewStory(event) {
+		const file = event.target.files[0];
+		if (!file) return;
+		const reader = new FileReader();
+		reader.onload = e => {
+			storyPreview = e.target.result;
+			document.getElementById('storyPreview').src = storyPreview;
+			document.getElementById('storyPreviewWrap').classList.remove('hidden');
+		};
+		reader.readAsDataURL(file);
+	}
+
+	function saveStory() {
+		if (!selectedPetForHighlight) return;
+		if (!storyPreview) {
+			alert('Upload a story image first.');
+			return;
+		}
+
+		const caption = document.getElementById('storyCaption').value.trim();
+		const key = String(selectedPetForHighlight);
+		if (!Array.isArray(highlights[key])) highlights[key] = [];
+
+		highlights[key].push({
+			imageData: storyPreview,
+			caption,
+			createdAt: new Date().toISOString()
+		});
+
+		saveHighlightsState();
+		renderStoryList();
+		renderHighlights();
+		renderProfileHeader();
+
+		storyPreview = '';
+		document.getElementById('storyFile').value = '';
+		document.getElementById('storyCaption').value = '';
+		document.getElementById('storyPreviewWrap').classList.add('hidden');
+	}
+
+	function deleteStory(index) {
+		const key = String(selectedPetForHighlight);
+		if (!Array.isArray(highlights[key])) return;
+		highlights[key].splice(index, 1);
+		saveHighlightsState();
+		renderStoryList();
+		renderHighlights();
+		renderProfileHeader();
+	}
+
+	function renderStoryList() {
+		const list = document.getElementById('storyList');
+		const key = String(selectedPetForHighlight);
+		const stories = Array.isArray(highlights[key]) ? highlights[key] : [];
+
+		if (!stories.length) {
+			list.innerHTML = '<p style="color:var(--bark-light);font-size:0.86rem;">No stories yet. Upload first highlight for this pet.</p>';
+			return;
+		}
+
+		list.innerHTML = stories.slice().reverse().map((story, idx) => {
+			const actualIndex = stories.length - 1 - idx;
+			return `
+				<article class="story-card">
+					<img src="${story.imageData}" alt="story image">
+					<div class="story-info">
+						${story.caption ? `<div>${escapeHtml(story.caption)}</div>` : '<div>No caption</div>'}
+						<div style="margin-top:4px;display:flex;justify-content:space-between;align-items:center;">
+							<span>${ago(story.createdAt)}</span>
+							<button class="btn" type="button" onclick="deleteStory(${actualIndex})">Delete</button>
+						</div>
+					</div>
+				</article>
+			`;
+		}).join('');
+	}
+
+	loadData();
+	renderProfileHeader();
+	renderHighlights();
+	renderPostGrid();
+</script>
+</body>
+</html>

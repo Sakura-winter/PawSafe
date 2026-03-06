@@ -1,0 +1,1556 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PawSafe Dashboard</title>
+    <link href="https://fonts.googleapis.com/css2?family=Fraunces:wght@700;900&family=DM+Sans:wght@400;500;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --cream: #faf6f0;
+            --warm: #f5ecd8;
+            --bark: #3d2b1f;
+            --bark-light: #6b4a36;
+            --rust: #c0502a;
+            --rust-light: #e8846a;
+            --sage: #5c7a5a;
+            --sky: #4a7fa5;
+            --amber: #d4891a;
+            --card-bg: #fffdf9;
+            --border: #e8ddd0;
+            --radius: 18px;
+        }
+
+        * {
+            box-sizing: border-box;
+        }
+
+        body {
+            margin: 0;
+            font-family: 'DM Sans', sans-serif;
+            background: radial-gradient(circle at 90% 20%, #f8efdc 0%, var(--cream) 45%), var(--cream);
+            color: var(--bark);
+            min-height: 100vh;
+        }
+
+        nav {
+            position: sticky;
+            top: 0;
+            z-index: 40;
+            height: 68px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 0 24px;
+            background: rgba(250, 246, 240, 0.94);
+            backdrop-filter: blur(12px);
+            border-bottom: 1px solid var(--border);
+        }
+
+        .logo {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            font-family: 'Fraunces', serif;
+            font-weight: 900;
+            font-size: 1.45rem;
+        }
+
+        .logo-paw {
+            width: 34px;
+            height: 34px;
+            border-radius: 50% 50% 50% 8px;
+            background: var(--rust);
+            color: #fff;
+            border: 2px solid var(--bark);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1rem;
+        }
+
+        .logo span {
+            color: var(--rust);
+        }
+
+        .nav-tabs {
+            display: flex;
+            background: var(--warm);
+            padding: 5px;
+            border-radius: 12px;
+            gap: 6px;
+        }
+
+        .ntab {
+            border: 0;
+            border-radius: 10px;
+            background: transparent;
+            color: var(--bark-light);
+            padding: 8px 16px;
+            font-weight: 700;
+            font-size: 0.85rem;
+            cursor: pointer;
+        }
+
+        .ntab.active {
+            background: var(--rust);
+            color: #fff;
+            box-shadow: 2px 2px 0 var(--bark);
+        }
+
+        .nav-actions {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .btn-top {
+            border: 2px solid var(--bark);
+            background: var(--amber);
+            color: var(--bark);
+            border-radius: 12px;
+            padding: 8px 14px;
+            font-weight: 700;
+            cursor: pointer;
+            box-shadow: 2px 2px 0 var(--bark);
+            text-decoration: none;
+            display: inline-flex;
+            align-items: center;
+        }
+
+        .btn-top.profile {
+            background: var(--warm);
+        }
+
+        .user-avatar {
+            width: 38px;
+            height: 38px;
+            border-radius: 50%;
+            background: var(--sage);
+            color: #fff;
+            border: 2px solid var(--bark);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 800;
+            font-size: 0.85rem;
+        }
+
+        .app {
+            max-width: 1180px;
+            margin: 0 auto;
+            display: flex;
+            gap: 22px;
+            padding: 24px 18px;
+        }
+
+        .sidebar {
+            width: 285px;
+            flex-shrink: 0;
+            display: flex;
+            flex-direction: column;
+            gap: 14px;
+        }
+
+        .section {
+            background: var(--card-bg);
+            border: 1px solid var(--border);
+            border-radius: var(--radius);
+            overflow: hidden;
+            box-shadow: 3px 3px 0 var(--border);
+        }
+
+        .section-header {
+            padding: 14px 16px;
+            border-bottom: 1px solid var(--border);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-family: 'Fraunces', serif;
+            font-weight: 700;
+        }
+
+        .chip {
+            background: var(--rust);
+            color: #fff;
+            font-size: 0.75rem;
+            border-radius: 999px;
+            padding: 2px 8px;
+            font-family: 'DM Sans', sans-serif;
+            font-weight: 700;
+        }
+
+        .pet-list {
+            max-height: 290px;
+            overflow-y: auto;
+            padding: 10px;
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+
+        .pet-card {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 10px;
+            border-radius: 12px;
+            border: 1px solid transparent;
+            background: transparent;
+            cursor: pointer;
+        }
+
+        .pet-card:hover,
+        .pet-card.selected {
+            background: var(--warm);
+            border-color: var(--border);
+        }
+
+        .pet-avatar {
+            width: 38px;
+            height: 38px;
+            border-radius: 50%;
+            border: 2px solid var(--border);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: var(--warm);
+        }
+
+        .pet-info {
+            flex: 1;
+            min-width: 0;
+        }
+
+        .pet-name {
+            font-weight: 700;
+            font-size: 0.9rem;
+        }
+
+        .pet-sub {
+            color: var(--bark-light);
+            font-size: 0.76rem;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .remove-pet {
+            border: 0;
+            width: 24px;
+            height: 24px;
+            border-radius: 7px;
+            background: transparent;
+            color: var(--bark-light);
+            cursor: pointer;
+        }
+
+        .remove-pet:hover {
+            background: #ffe3d8;
+            color: var(--rust);
+        }
+
+        .inline-add {
+            margin: 0 10px 10px;
+            border: 2px dashed var(--border);
+            border-radius: 12px;
+            text-align: center;
+            padding: 8px;
+            cursor: pointer;
+            font-size: 0.82rem;
+            font-weight: 700;
+            color: var(--bark-light);
+        }
+
+        .inline-add:hover {
+            border-color: var(--rust);
+            color: var(--rust);
+        }
+
+        .featured {
+            padding: 16px;
+        }
+
+        .featured-name {
+            font-family: 'Fraunces', serif;
+            font-size: 1.15rem;
+            margin-bottom: 6px;
+        }
+
+        .featured-meta {
+            color: var(--bark-light);
+            font-size: 0.82rem;
+            margin-bottom: 10px;
+        }
+
+        .tags {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 6px;
+        }
+
+        .tag {
+            background: var(--warm);
+            border: 1px solid var(--border);
+            border-radius: 999px;
+            padding: 3px 8px;
+            font-size: 0.72rem;
+            font-weight: 700;
+        }
+
+        .highlight-row {
+            padding: 10px;
+            display: flex;
+            gap: 8px;
+            overflow-x: auto;
+        }
+
+        .mini-highlight {
+            min-width: 72px;
+            text-align: center;
+            cursor: pointer;
+        }
+
+        .mini-ring {
+            width: 58px;
+            height: 58px;
+            border-radius: 50%;
+            margin: 0 auto 5px;
+            background: linear-gradient(135deg, var(--rust), #f0b69e);
+            padding: 2px;
+            position: relative;
+        }
+
+        .mini-inner {
+            width: 100%;
+            height: 100%;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: var(--card-bg);
+            border: 2px solid var(--border);
+            font-size: 1.3rem;
+        }
+
+        .mini-count {
+            position: absolute;
+            right: -3px;
+            bottom: -2px;
+            min-width: 18px;
+            padding: 1px 5px;
+            border-radius: 999px;
+            border: 2px solid var(--card-bg);
+            background: var(--bark);
+            color: #fff;
+            font-size: 0.66rem;
+            font-weight: 700;
+        }
+
+        .mini-name {
+            font-size: 0.72rem;
+            color: var(--bark-light);
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .stats {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 1px;
+            background: var(--border);
+        }
+
+        .stat {
+            padding: 12px;
+            background: var(--card-bg);
+            text-align: center;
+        }
+
+        .stat-num {
+            font-family: 'Fraunces', serif;
+            font-size: 1.4rem;
+            color: var(--rust);
+            font-weight: 900;
+        }
+
+        .stat-label {
+            font-size: 0.72rem;
+            color: var(--bark-light);
+            font-weight: 700;
+            text-transform: uppercase;
+        }
+
+        .filters {
+            padding: 10px;
+            display: flex;
+            flex-wrap: wrap;
+            gap: 6px;
+        }
+
+        .filter-btn {
+            border-radius: 999px;
+            border: 1px solid var(--border);
+            background: transparent;
+            color: var(--bark-light);
+            font-weight: 700;
+            font-size: 0.77rem;
+            padding: 5px 11px;
+            cursor: pointer;
+        }
+
+        .filter-btn.active {
+            background: var(--rust);
+            color: #fff;
+            border-color: var(--rust);
+        }
+
+        .feed {
+            flex: 1;
+            min-width: 0;
+            display: flex;
+            flex-direction: column;
+            gap: 16px;
+        }
+
+        .card {
+            background: var(--card-bg);
+            border: 1px solid var(--border);
+            border-radius: var(--radius);
+            box-shadow: 3px 3px 0 var(--border);
+        }
+
+        .composer {
+            padding: 16px;
+        }
+
+        .composer-tabs {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 6px;
+            margin-bottom: 12px;
+        }
+
+        .composer-tab {
+            border: 1px solid var(--border);
+            border-radius: 10px;
+            background: var(--warm);
+            color: var(--bark-light);
+            padding: 7px 13px;
+            font-weight: 700;
+            font-size: 0.82rem;
+            cursor: pointer;
+        }
+
+        .composer-tab.active {
+            color: #fff;
+            background: var(--rust);
+            border-color: var(--rust);
+        }
+
+        textarea,
+        input,
+        select {
+            width: 100%;
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            background: var(--warm);
+            color: var(--bark);
+            padding: 10px 12px;
+            font-family: inherit;
+            font-size: 0.9rem;
+            outline: none;
+        }
+
+        textarea:focus,
+        input:focus,
+        select:focus {
+            border-color: var(--rust);
+        }
+
+        .row {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 9px;
+            margin-bottom: 10px;
+        }
+
+        .composer-foot {
+            display: flex;
+            justify-content: space-between;
+            gap: 10px;
+            margin-top: 8px;
+        }
+
+        .btn-main {
+            border: 2px solid var(--bark);
+            border-radius: 12px;
+            background: var(--rust);
+            color: #fff;
+            font-weight: 800;
+            cursor: pointer;
+            padding: 9px 16px;
+            box-shadow: 2px 2px 0 var(--bark);
+            white-space: nowrap;
+        }
+
+        .upload {
+            border: 2px dashed var(--sage);
+            background: #eff7ef;
+            color: var(--sage);
+            border-radius: 12px;
+            text-align: center;
+            padding: 18px;
+            font-weight: 700;
+            cursor: pointer;
+        }
+
+        .preview-strip {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(78px, 1fr));
+            gap: 8px;
+            margin-top: 8px;
+        }
+
+        .preview-strip img {
+            width: 100%;
+            height: 78px;
+            object-fit: cover;
+            border-radius: 10px;
+            border: 1px solid var(--border);
+            background: #f6f1e7;
+        }
+
+        .post-gallery {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+            gap: 8px;
+            margin-top: 8px;
+        }
+
+        .post-gallery img {
+            width: 100%;
+            height: 120px;
+            object-fit: cover;
+            border-radius: 10px;
+            border: 1px solid var(--border);
+            background: #f6f1e7;
+        }
+
+        .post {
+            animation: rise 0.25s ease;
+        }
+
+        @keyframes rise {
+            from {
+                opacity: 0;
+                transform: translateY(10px);
+            }
+
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .post-head {
+            padding: 13px 14px;
+            display: flex;
+            gap: 10px;
+            align-items: center;
+        }
+
+        .post-body {
+            padding: 0 14px 14px;
+            font-size: 0.92rem;
+            line-height: 1.55;
+        }
+
+        .post-footer {
+            border-top: 1px solid var(--border);
+            padding: 8px 10px;
+            display: flex;
+            gap: 6px;
+        }
+
+        .react {
+            border: 1px solid transparent;
+            border-radius: 9px;
+            background: transparent;
+            color: var(--bark-light);
+            font-size: 0.78rem;
+            font-weight: 700;
+            padding: 6px 10px;
+            cursor: pointer;
+        }
+
+        .react:hover {
+            background: var(--warm);
+            border-color: var(--border);
+        }
+
+        .react.liked {
+            color: var(--rust);
+        }
+
+        .badge {
+            border-radius: 999px;
+            font-size: 0.7rem;
+            font-weight: 800;
+            padding: 2px 7px;
+            display: inline-flex;
+            align-items: center;
+            gap: 3px;
+        }
+
+        .badge.text { background: #ebf4fb; color: var(--sky); }
+        .badge.photo { background: #edf5ed; color: var(--sage); }
+        .badge.lost { background: #faeee8; color: var(--rust); }
+        .badge.found { background: #edf5ed; color: var(--sage); }
+
+        .empty {
+            text-align: center;
+            padding: 44px 18px;
+            color: var(--bark-light);
+            border: 1px dashed var(--border);
+            border-radius: var(--radius);
+            background: var(--card-bg);
+        }
+
+        .modal-wrap {
+            position: fixed;
+            inset: 0;
+            z-index: 99;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: rgba(61, 43, 31, 0.5);
+            backdrop-filter: blur(3px);
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 0.2s;
+            padding: 16px;
+        }
+
+        .modal-wrap.show {
+            opacity: 1;
+            pointer-events: all;
+        }
+
+        .modal {
+            width: 100%;
+            max-width: 520px;
+            background: var(--card-bg);
+            border: 2px solid var(--bark);
+            border-radius: 20px;
+            box-shadow: 5px 5px 0 var(--bark);
+            overflow: hidden;
+        }
+
+        .modal-head {
+            padding: 16px;
+            border-bottom: 1px solid var(--border);
+            font-family: 'Fraunces', serif;
+            font-weight: 900;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .modal-body {
+            padding: 16px;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+
+        .emoji-grid {
+            display: grid;
+            grid-template-columns: repeat(6, 1fr);
+            gap: 8px;
+            background: var(--warm);
+            padding: 10px;
+            border: 1px solid var(--border);
+            border-radius: 12px;
+        }
+
+        .emoji-opt {
+            border: 2px solid transparent;
+            border-radius: 10px;
+            background: var(--cream);
+            font-size: 1.35rem;
+            cursor: pointer;
+            aspect-ratio: 1;
+        }
+
+        .emoji-opt.selected {
+            border-color: var(--rust);
+        }
+
+        .small {
+            font-size: 0.78rem;
+            color: var(--bark-light);
+        }
+
+        .hidden {
+            display: none;
+        }
+
+        @media (max-width: 900px) {
+            .sidebar {
+                display: none;
+            }
+
+            .nav-tabs {
+                display: none;
+            }
+
+            nav {
+                padding: 0 12px;
+            }
+        }
+
+        @media (max-width: 650px) {
+            .row {
+                grid-template-columns: 1fr;
+            }
+
+            .btn-top {
+                padding: 7px 11px;
+            }
+        }
+    </style>
+</head>
+<body>
+<nav>
+    <div class="logo">
+        <div class="logo-paw">🐾</div>
+        Paw<span>Safe</span>
+    </div>
+    <div class="nav-tabs">
+        <button class="ntab active" data-tab="feed" onclick="setTab('feed', this)">Feed</button>
+        <button class="ntab" data-tab="lost" onclick="setTab('lost', this)">Lost & Found</button>
+        <button class="ntab" data-tab="pets" onclick="setTab('pets', this)">My Pets</button>
+    </div>
+    <div class="nav-actions">
+        <a class="btn-top profile" href="/accounts/user/">Profile</a>
+        <button class="btn-top" onclick="openModal()">+ Add Pet</button>
+        <a class="user-avatar" id="userAvatar" href="/accounts/user/" style="text-decoration:none;"></a>
+    </div>
+</nav>
+
+<div class="app">
+    <aside class="sidebar">
+        <section class="section">
+            <div class="section-header">My Pets <span class="chip" id="petCount">0</span></div>
+            <div id="petList" class="pet-list"></div>
+            <div class="inline-add" onclick="openModal()">+ Add new pet</div>
+        </section>
+
+        <section class="section">
+            <div class="section-header">Featured</div>
+            <div class="featured" id="featuredPet"></div>
+        </section>
+
+        <section class="section">
+            <div class="section-header">Pet Highlights</div>
+            <div id="petHighlights" class="highlight-row"></div>
+        </section>
+
+        <section class="section">
+            <div class="section-header">Community</div>
+            <div class="stats">
+                <div class="stat"><div class="stat-num" id="statPosts">0</div><div class="stat-label">Posts</div></div>
+                <div class="stat"><div class="stat-num" id="statPets">0</div><div class="stat-label">Pets</div></div>
+                <div class="stat"><div class="stat-num" id="statLost">0</div><div class="stat-label">Lost</div></div>
+                <div class="stat"><div class="stat-num" id="statFound">0</div><div class="stat-label">Found</div></div>
+            </div>
+        </section>
+
+        <section class="section">
+            <div class="section-header">Filters</div>
+            <div class="filters">
+                <button class="filter-btn active" onclick="filterPosts('all', this)">All</button>
+                <button class="filter-btn" onclick="filterPosts('photo', this)">Photos</button>
+                <button class="filter-btn" onclick="filterPosts('text', this)">Updates</button>
+                <button class="filter-btn" onclick="filterPosts('lost', this)">Lost</button>
+                <button class="filter-btn" onclick="filterPosts('found', this)">Found</button>
+            </div>
+        </section>
+    </aside>
+
+    <main class="feed">
+        <section class="card composer">
+            <div class="composer-tabs">
+                <button class="composer-tab active" data-type="text" onclick="setComposerType('text', this)">Update</button>
+                <button class="composer-tab" data-type="photo" onclick="setComposerType('photo', this)">Photo</button>
+                <button class="composer-tab" data-type="lost" onclick="setComposerType('lost', this)">Lost Pet</button>
+                <button class="composer-tab" data-type="found" onclick="setComposerType('found', this)">Found Pet</button>
+            </div>
+
+            <div id="form-text">
+                <textarea id="textInput" rows="3" placeholder="What update do you want to share?"></textarea>
+                <div class="composer-foot">
+                    <select id="textPetTag"><option value="">Tag a pet</option></select>
+                    <button class="btn-main" onclick="submitPost('text')">Post</button>
+                </div>
+            </div>
+
+            <div id="form-photo" class="hidden">
+                <div class="upload" onclick="document.getElementById('photoFile').click()">Tap to upload photo</div>
+                <input id="photoFile" type="file" accept="image/*" class="hidden" onchange="previewPhoto(event)">
+                <div id="photoPreviewBox" class="hidden" style="margin-top: 10px;">
+                    <img id="photoPreview" alt="Photo preview" style="width: 100%; max-height: 300px; border-radius: 12px; border: 1px solid var(--border); object-fit: cover;">
+                </div>
+                <textarea id="photoCaption" rows="2" style="margin-top: 10px;" placeholder="Caption"></textarea>
+                <div class="composer-foot">
+                    <select id="photoPetTag"><option value="">Tag a pet</option></select>
+                    <button class="btn-main" onclick="submitPost('photo')">Post Photo</button>
+                </div>
+            </div>
+
+            <div id="form-lost" class="hidden">
+                <div class="row">
+                    <select id="lostPetTag"><option value="">Tag your pet (optional)</option></select>
+                    <input id="lostName" placeholder="Pet name">
+                    <select id="lostSpecies"><option>Dog</option><option>Cat</option><option>Bird</option><option>Rabbit</option><option>Other</option></select>
+                    <input id="lostBreed" placeholder="Breed">
+                    <input id="lostColor" placeholder="Color">
+                    <input id="lostLocation" placeholder="Last seen location">
+                    <input id="lostDate" type="date">
+                </div>
+                <div class="upload" onclick="document.getElementById('lostPhotos').click()">Upload lost pet photos (1 or more)</div>
+                <input id="lostPhotos" type="file" accept="image/*" multiple class="hidden" onchange="previewMultiImages(event, 'lostPreviewBox')">
+                <div id="lostPreviewBox" class="preview-strip hidden"></div>
+                <div style="margin-top:8px; display:flex; justify-content:flex-end;">
+                    <button type="button" class="filter-btn" onclick="clearPendingImages('lost')">Clear photos</button>
+                </div>
+                <textarea id="lostDesc" rows="2" placeholder="Any special markings, collar, or notes"></textarea>
+                <div class="composer-foot">
+                    <input id="lostContact" placeholder="Contact number">
+                    <button class="btn-main" style="background: var(--rust);" onclick="submitPost('lost')">Report Lost</button>
+                </div>
+            </div>
+
+            <div id="form-found" class="hidden">
+                <div class="row">
+                    <select id="foundSpecies"><option>Dog</option><option>Cat</option><option>Bird</option><option>Rabbit</option><option>Other</option></select>
+                    <input id="foundColor" placeholder="Color or markings">
+                    <input id="foundLocation" placeholder="Found location">
+                    <input id="foundDate" type="date">
+                </div>
+                <div class="upload" onclick="document.getElementById('foundPhotos').click()">Upload found pet photos (1 or more)</div>
+                <input id="foundPhotos" type="file" accept="image/*" multiple class="hidden" onchange="previewMultiImages(event, 'foundPreviewBox')">
+                <div id="foundPreviewBox" class="preview-strip hidden"></div>
+                <div style="margin-top:8px; display:flex; justify-content:flex-end;">
+                    <button type="button" class="filter-btn" onclick="clearPendingImages('found')">Clear photos</button>
+                </div>
+                <textarea id="foundDesc" rows="2" placeholder="Condition, collar, size, behavior"></textarea>
+                <div class="composer-foot">
+                    <input id="foundContact" placeholder="Contact number">
+                    <button class="btn-main" style="background: var(--sage);" onclick="submitPost('found')">Report Found</button>
+                </div>
+            </div>
+        </section>
+
+        <section id="postsContainer"></section>
+    </main>
+</div>
+
+<div class="modal-wrap" id="petModal" onclick="closeModalOutside(event)">
+    <div class="modal">
+        <div class="modal-head">
+            Add New Pet
+            <button class="filter-btn" type="button" onclick="closeModal()">Close</button>
+        </div>
+        <div class="modal-body">
+            <div>
+                <label class="small">Choose avatar</label>
+                <div class="emoji-grid" id="emojiGrid">
+                    <button class="emoji-opt selected" data-emoji="🐶" onclick="pickEmoji(event, this)">🐶</button>
+                    <button class="emoji-opt" data-emoji="🐱" onclick="pickEmoji(event, this)">🐱</button>
+                    <button class="emoji-opt" data-emoji="🐰" onclick="pickEmoji(event, this)">🐰</button>
+                    <button class="emoji-opt" data-emoji="🦜" onclick="pickEmoji(event, this)">🦜</button>
+                    <button class="emoji-opt" data-emoji="🐢" onclick="pickEmoji(event, this)">🐢</button>
+                    <button class="emoji-opt" data-emoji="🦊" onclick="pickEmoji(event, this)">🦊</button>
+                </div>
+            </div>
+            <div class="row">
+                <input id="newName" placeholder="Pet name *">
+                <select id="newSpecies"><option>Dog</option><option>Cat</option><option>Rabbit</option><option>Bird</option><option>Other</option></select>
+                <input id="newBreed" placeholder="Breed">
+                <input id="newAge" placeholder="Age">
+                <input id="newColor" placeholder="Color">
+                <select id="newGender"><option>Male</option><option>Female</option><option>Unknown</option></select>
+                <input id="newWeight" placeholder="Weight">
+                <input id="newChip" placeholder="Microchip ID">
+            </div>
+            <textarea id="newNotes" rows="2" placeholder="Medical notes"></textarea>
+            <button class="btn-main" onclick="savePet()">Save Pet</button>
+        </div>
+    </div>
+</div>
+
+<script>
+    const APP_USER = "{{ user.username|default:'User'|escapejs }}";
+    const STORAGE_KEY = `pawsafe_dashboard_${APP_USER}`;
+    const HIGHLIGHTS_KEY = `pawsafe_highlights_${APP_USER}`;
+
+    let composerType = 'text';
+    let selectedEmoji = '🐶';
+    let currentTab = 'feed';
+    let currentFilter = 'all';
+    let activePetId = null;
+    let pets = [];
+    let posts = [];
+    let likedPosts = new Set();
+    let highlights = {};
+    let pendingLostImages = [];
+    let pendingFoundImages = [];
+    let nextId = 1;
+
+    function escapeHtml(value) {
+        return String(value || '')
+            .replace(/&/g, '&amp;')
+            .replace(/</g, '&lt;')
+            .replace(/>/g, '&gt;')
+            .replace(/\"/g, '&quot;')
+            .replace(/'/g, '&#39;');
+    }
+
+    function getInitials(name) {
+        const parts = String(name || 'U').trim().split(/\s+/).filter(Boolean);
+        return parts.slice(0, 2).map(p => p[0].toUpperCase()).join('') || 'U';
+    }
+
+    function nowIso() {
+        return new Date().toISOString();
+    }
+
+    function timeAgo(isoTime) {
+        const past = new Date(isoTime).getTime();
+        if (!past) return 'just now';
+        const seconds = Math.max(1, Math.floor((Date.now() - past) / 1000));
+        if (seconds < 60) return `${seconds}s ago`;
+        const mins = Math.floor(seconds / 60);
+        if (mins < 60) return `${mins}m ago`;
+        const hours = Math.floor(mins / 60);
+        if (hours < 24) return `${hours}h ago`;
+        const days = Math.floor(hours / 24);
+        return `${days}d ago`;
+    }
+
+    function defaultState() {
+        return {
+            nextId: 6,
+            activePetId: 1,
+            likedPostIds: [],
+            pets: [
+                {
+                    id: 1,
+                    name: 'Buddy',
+                    species: 'Dog',
+                    breed: 'Labrador',
+                    age: '3 years',
+                    color: 'Golden',
+                    gender: 'Male',
+                    weight: '28 kg',
+                    chip: 'MC-1928',
+                    notes: 'Vaccinated and playful.',
+                    emoji: '🐶'
+                },
+                {
+                    id: 2,
+                    name: 'Whiskers',
+                    species: 'Cat',
+                    breed: 'Persian',
+                    age: '5 years',
+                    color: 'White',
+                    gender: 'Female',
+                    weight: '4 kg',
+                    chip: '',
+                    notes: 'Indoor only.',
+                    emoji: '🐱'
+                }
+            ],
+            posts: [
+                { id: 1, type: 'photo', author: APP_USER, petId: 1, text: 'Morning walk win.', likes: 14, comments: 3, imageData: '', createdAt: nowIso() },
+                { id: 2, type: 'lost', author: 'Community Alert', petId: null, lostName: 'Mochi', lostSpecies: 'Cat', lostBreed: 'Siamese', lostColor: 'Cream', lostLocation: 'Elm Street', lostDate: '2026-03-01', lostDesc: 'Blue collar with bell.', lostContact: '555-0123', likes: 29, comments: 8, createdAt: nowIso() },
+                { id: 3, type: 'text', author: APP_USER, petId: 2, text: 'Whiskers stole another treat.', likes: 22, comments: 5, createdAt: nowIso() },
+                { id: 4, type: 'found', author: 'Sam R.', petId: null, foundSpecies: 'Dog', foundColor: 'Brown and white', foundLocation: 'Central Park', foundDate: '2026-03-02', foundDesc: 'Friendly and safe.', foundContact: '555-0456', likes: 18, comments: 6, createdAt: nowIso() },
+                { id: 5, type: 'photo', author: APP_USER, petId: 2, text: 'Sunday nap mode.', likes: 31, comments: 4, imageData: '', createdAt: nowIso() }
+            ]
+        };
+    }
+
+    function loadState() {
+        try {
+            const raw = localStorage.getItem(STORAGE_KEY);
+            const state = raw ? JSON.parse(raw) : defaultState();
+            pets = Array.isArray(state.pets) ? state.pets : [];
+            posts = Array.isArray(state.posts) ? state.posts : [];
+            nextId = Number(state.nextId || 1);
+            activePetId = state.activePetId || (pets[0] ? pets[0].id : null);
+            likedPosts = new Set(Array.isArray(state.likedPostIds) ? state.likedPostIds : []);
+        } catch (err) {
+            pets = defaultState().pets;
+            posts = defaultState().posts;
+            nextId = defaultState().nextId;
+            activePetId = defaultState().activePetId;
+            likedPosts = new Set();
+        }
+
+        try {
+            const rawHighlights = localStorage.getItem(HIGHLIGHTS_KEY);
+            highlights = rawHighlights ? JSON.parse(rawHighlights) : {};
+        } catch (err) {
+            highlights = {};
+        }
+    }
+
+    function saveState() {
+        localStorage.setItem(STORAGE_KEY, JSON.stringify({
+            pets,
+            posts,
+            nextId,
+            activePetId,
+            likedPostIds: Array.from(likedPosts)
+        }));
+    }
+
+    function renderPets() {
+        const petList = document.getElementById('petList');
+        petList.innerHTML = '';
+
+        pets.forEach(pet => {
+            const el = document.createElement('div');
+            const selectedClass = activePetId === pet.id ? ' selected' : '';
+            el.className = `pet-card${selectedClass}`;
+            el.innerHTML = `
+                <div class="pet-avatar">${escapeHtml(pet.emoji)}</div>
+                <div class="pet-info">
+                    <div class="pet-name">${escapeHtml(pet.name)}</div>
+                    <div class="pet-sub">${escapeHtml(pet.breed || pet.species)}${pet.age ? ` • ${escapeHtml(pet.age)}` : ''}</div>
+                </div>
+                <button class="remove-pet" type="button" aria-label="Remove pet">✕</button>
+            `;
+            el.addEventListener('click', () => {
+                activePetId = pet.id;
+                renderPets();
+                renderFeaturedPet();
+                saveState();
+            });
+            el.querySelector('.remove-pet').addEventListener('click', (event) => {
+                event.stopPropagation();
+                removePet(pet.id);
+            });
+            petList.appendChild(el);
+        });
+
+        document.getElementById('petCount').textContent = String(pets.length);
+        document.getElementById('statPets').textContent = String(pets.length);
+        updatePetSelects();
+    }
+
+    function renderFeaturedPet() {
+        const holder = document.getElementById('featuredPet');
+        if (!pets.length) {
+            holder.innerHTML = '<p class="small">No pets yet. Add your first pet.</p>';
+            return;
+        }
+
+        const pet = pets.find(p => p.id === activePetId) || pets[0];
+        activePetId = pet.id;
+        holder.innerHTML = `
+            <div class="featured-name">${escapeHtml(pet.emoji)} ${escapeHtml(pet.name)}</div>
+            <div class="featured-meta">${escapeHtml(pet.species)}${pet.breed ? ` • ${escapeHtml(pet.breed)}` : ''}</div>
+            <div class="tags">
+                ${pet.age ? `<span class="tag">Age: ${escapeHtml(pet.age)}</span>` : ''}
+                ${pet.gender ? `<span class="tag">${escapeHtml(pet.gender)}</span>` : ''}
+                ${pet.color ? `<span class="tag">${escapeHtml(pet.color)}</span>` : ''}
+                ${pet.chip ? '<span class="tag">Microchipped</span>' : ''}
+            </div>
+            ${pet.notes ? `<p class="small" style="margin-top: 10px;">${escapeHtml(pet.notes)}</p>` : ''}
+            <a href="/accounts/user/" class="btn-top profile" style="margin-top:10px;padding:6px 10px;font-size:0.78rem;">Open Profile</a>
+        `;
+    }
+
+    function renderHighlightPreview() {
+        const container = document.getElementById('petHighlights');
+        if (!pets.length) {
+            container.innerHTML = '<p class="small" style="margin:0;">Add pets to create highlights.</p>';
+            return;
+        }
+
+        container.innerHTML = pets.map(pet => {
+            const stories = Array.isArray(highlights[String(pet.id)]) ? highlights[String(pet.id)] : [];
+            return `
+                <a class="mini-highlight" href="/accounts/user/" title="Open ${escapeHtml(pet.name)} highlight">
+                    <div class="mini-ring">
+                        <div class="mini-inner">${escapeHtml(pet.emoji || '🐾')}</div>
+                        <div class="mini-count">${stories.length}</div>
+                    </div>
+                    <div class="mini-name">${escapeHtml(pet.name)}</div>
+                </a>
+            `;
+        }).join('');
+    }
+
+    function removePet(id) {
+        const pet = pets.find(p => p.id === id);
+        if (!pet) return;
+        if (!window.confirm(`Remove ${pet.name} from your profile?`)) return;
+        pets = pets.filter(p => p.id !== id);
+        posts = posts.map(post => post.petId === id ? { ...post, petId: null } : post);
+        delete highlights[String(id)];
+        localStorage.setItem(HIGHLIGHTS_KEY, JSON.stringify(highlights));
+        if (activePetId === id) {
+            activePetId = pets[0] ? pets[0].id : null;
+        }
+        saveState();
+        renderAll();
+    }
+
+    function updatePetSelects() {
+        ['textPetTag', 'photoPetTag', 'lostPetTag'].forEach(selectId => {
+            const select = document.getElementById(selectId);
+            const previous = select.value;
+            if (selectId === 'lostPetTag') {
+                select.innerHTML = '<option value="">Tag your pet (optional)</option>';
+            } else {
+                select.innerHTML = '<option value="">Tag a pet</option>';
+            }
+            pets.forEach(pet => {
+                const option = document.createElement('option');
+                option.value = String(pet.id);
+                option.textContent = `${pet.emoji} ${pet.name}`;
+                select.appendChild(option);
+            });
+            select.value = previous;
+        });
+    }
+
+    function onLostPetTagChange() {
+        const petId = Number(document.getElementById('lostPetTag').value) || null;
+        if (!petId) return;
+        const pet = pets.find(item => item.id === petId);
+        if (!pet) return;
+
+        // Auto-fill known pet details when user tags one of their pets in lost post.
+        document.getElementById('lostName').value = pet.name || '';
+        document.getElementById('lostSpecies').value = pet.species || 'Other';
+        document.getElementById('lostBreed').value = pet.breed || '';
+        document.getElementById('lostColor').value = pet.color || '';
+    }
+
+    function statsUpdate() {
+        document.getElementById('statPosts').textContent = String(posts.length);
+        document.getElementById('statLost').textContent = String(posts.filter(p => p.type === 'lost').length);
+        document.getElementById('statFound').textContent = String(posts.filter(p => p.type === 'found').length);
+    }
+
+    function visiblePosts() {
+        let list = posts.slice();
+        if (currentTab === 'lost') {
+            list = list.filter(post => post.type === 'lost' || post.type === 'found');
+        } else if (currentTab === 'pets') {
+            list = list.filter(post => post.petId !== null);
+        }
+
+        if (currentFilter !== 'all') {
+            list = list.filter(post => post.type === currentFilter);
+        }
+
+        return list;
+    }
+
+    function renderPosts() {
+        const container = document.getElementById('postsContainer');
+        const list = visiblePosts();
+        if (!list.length) {
+            container.innerHTML = '<div class="empty"><h3 style="margin: 0 0 6px; font-family: Fraunces, serif;">Nothing yet</h3><p style="margin: 0;">Create your first post to start the feed.</p></div>';
+            statsUpdate();
+            return;
+        }
+
+        container.innerHTML = list.slice().reverse().map(renderPost).join('');
+        statsUpdate();
+    }
+
+    function postBadge(type) {
+        if (type === 'photo') return '<span class="badge photo">Photo</span>';
+        if (type === 'lost') return '<span class="badge lost">Lost Pet</span>';
+        if (type === 'found') return '<span class="badge found">Found Pet</span>';
+        return '<span class="badge text">Update</span>';
+    }
+
+    function renderPost(post) {
+        const pet = post.petId ? pets.find(p => p.id === post.petId) : null;
+        const liked = likedPosts.has(post.id);
+        const likes = post.likes + (liked ? 1 : 0);
+
+        let body = '';
+        if (post.type === 'text') {
+            body = `<p>${escapeHtml(post.text)}</p>`;
+        }
+
+        if (post.type === 'photo') {
+            const imageHtml = post.imageData
+                ? `<img src="${post.imageData}" alt="Post image" style="width: 100%; max-height: 360px; object-fit: cover; border-radius: 12px; border: 1px solid var(--border);">`
+                : '<div style="height: 220px; border-radius: 12px; border: 1px solid var(--border); background: linear-gradient(135deg, var(--warm), #efe2cc); display: flex; align-items: center; justify-content: center; font-size: 4rem;">🐾</div>';
+            body = `${imageHtml}${post.text ? `<p style="margin-top: 8px;">${escapeHtml(post.text)}</p>` : ''}`;
+        }
+
+        if (post.type === 'lost') {
+            const galleryHtml = renderImageGallery(post.lostImages || []);
+            body = `
+                <div style="background: #faeee8; border: 1px solid #e8ac9a; border-radius: 12px; padding: 10px;">
+                    <strong style="color: var(--rust);">Lost: ${escapeHtml(post.lostName || 'Unknown')}</strong>
+                    <p style="margin: 7px 0;">${escapeHtml(post.lostSpecies || '')}${post.lostBreed ? ` • ${escapeHtml(post.lostBreed)}` : ''}${post.lostColor ? ` • ${escapeHtml(post.lostColor)}` : ''}</p>
+                    <p style="margin: 7px 0;"><strong>Last Seen:</strong> ${escapeHtml(post.lostLocation || 'N/A')} ${post.lostDate ? `(${escapeHtml(post.lostDate)})` : ''}</p>
+                    ${galleryHtml}
+                    ${post.lostDesc ? `<p style="margin: 7px 0;">${escapeHtml(post.lostDesc)}</p>` : ''}
+                    <button class="btn-main" style="background: var(--rust); width: 100%; margin-top: 6px;" type="button" onclick="contactNumber('${escapeHtml(post.lostContact || '')}')">Contact ${escapeHtml(post.lostContact || '')}</button>
+                </div>
+            `;
+        }
+
+        if (post.type === 'found') {
+            const galleryHtml = renderImageGallery(post.foundImages || []);
+            body = `
+                <div style="background: #edf5ed; border: 1px solid #8bad89; border-radius: 12px; padding: 10px;">
+                    <strong style="color: var(--sage);">Found ${escapeHtml(post.foundSpecies || 'pet')}</strong>
+                    <p style="margin: 7px 0;">${escapeHtml(post.foundColor || '')}</p>
+                    <p style="margin: 7px 0;"><strong>Location:</strong> ${escapeHtml(post.foundLocation || 'N/A')} ${post.foundDate ? `(${escapeHtml(post.foundDate)})` : ''}</p>
+                    ${galleryHtml}
+                    ${post.foundDesc ? `<p style="margin: 7px 0;">${escapeHtml(post.foundDesc)}</p>` : ''}
+                    <button class="btn-main" style="background: var(--sage); width: 100%; margin-top: 6px;" type="button" onclick="contactNumber('${escapeHtml(post.foundContact || '')}')">Contact ${escapeHtml(post.foundContact || '')}</button>
+                </div>
+            `;
+        }
+
+        return `
+            <article class="card post" id="post-${post.id}">
+                <div class="post-head">
+                    <div class="pet-avatar" style="width: 40px; height: 40px;">${pet ? escapeHtml(pet.emoji) : '👤'}</div>
+                    <div style="flex: 1; min-width: 0;">
+                        <div style="font-weight: 700;">${escapeHtml(post.author)} ${pet ? `<span class="tag">${escapeHtml(pet.name)}</span>` : ''}</div>
+                        <div class="small" style="display: flex; gap: 6px; align-items: center; margin-top: 2px;">${postBadge(post.type)}</div>
+                    </div>
+                    <div class="small">${timeAgo(post.createdAt)}</div>
+                </div>
+                <div class="post-body">${body}</div>
+                <div class="post-footer">
+                    <button class="react ${liked ? 'liked' : ''}" type="button" onclick="toggleLike(${post.id})">${liked ? '❤️' : '🤍'} ${likes}</button>
+                    <button class="react" type="button">💬 ${post.comments || 0}</button>
+                    <button class="react" type="button" onclick="copyPostLink(${post.id})">Share</button>
+                </div>
+            </article>
+        `;
+    }
+
+    function setComposerType(type, el) {
+        composerType = type;
+        document.querySelectorAll('.composer-tab').forEach(tab => tab.classList.remove('active'));
+        el.classList.add('active');
+        ['text', 'photo', 'lost', 'found'].forEach(key => {
+            const form = document.getElementById(`form-${key}`);
+            form.classList.toggle('hidden', key !== type);
+        });
+    }
+
+    function setTab(tab, el) {
+        currentTab = tab;
+        document.querySelectorAll('.ntab').forEach(btn => btn.classList.remove('active'));
+        el.classList.add('active');
+        currentFilter = 'all';
+        document.querySelectorAll('.filter-btn').forEach((btn, index) => {
+            btn.classList.toggle('active', index === 0);
+        });
+        renderPosts();
+    }
+
+    function filterPosts(filterName, el) {
+        currentFilter = filterName;
+        document.querySelectorAll('.filter-btn').forEach(btn => btn.classList.remove('active'));
+        el.classList.add('active');
+        renderPosts();
+    }
+
+    function previewPhoto(event) {
+        const file = event.target.files[0];
+        if (!file) return;
+        const reader = new FileReader();
+        reader.onload = e => {
+            const img = document.getElementById('photoPreview');
+            img.src = e.target.result;
+            document.getElementById('photoPreviewBox').classList.remove('hidden');
+        };
+        reader.readAsDataURL(file);
+    }
+
+    function renderPendingPreview(type) {
+        const isLost = type === 'lost';
+        const images = isLost ? pendingLostImages : pendingFoundImages;
+        const box = document.getElementById(isLost ? 'lostPreviewBox' : 'foundPreviewBox');
+        box.innerHTML = '';
+
+        if (!images.length) {
+            box.classList.add('hidden');
+            return;
+        }
+
+        images.forEach(src => {
+            const img = document.createElement('img');
+            img.src = src;
+            img.alt = 'Preview image';
+            box.appendChild(img);
+        });
+
+        box.classList.remove('hidden');
+    }
+
+    function clearPendingImages(type) {
+        if (type === 'lost') {
+            pendingLostImages = [];
+            document.getElementById('lostPhotos').value = '';
+            renderPendingPreview('lost');
+            return;
+        }
+
+        pendingFoundImages = [];
+        document.getElementById('foundPhotos').value = '';
+        renderPendingPreview('found');
+    }
+
+    async function previewMultiImages(event, previewBoxId) {
+        const files = event.target.files;
+        if (!files || !files.length) return;
+
+        const incomingImages = (await readFilesAsDataUrls(files)).filter(Boolean);
+        if (previewBoxId === 'lostPreviewBox') {
+            pendingLostImages = pendingLostImages.concat(incomingImages);
+            renderPendingPreview('lost');
+        } else {
+            pendingFoundImages = pendingFoundImages.concat(incomingImages);
+            renderPendingPreview('found');
+        }
+
+        // Allow selecting the same file again in next add-more action.
+        event.target.value = '';
+    }
+
+    function readFilesAsDataUrls(fileList) {
+        const files = Array.from(fileList || []);
+        return Promise.all(files.map(file => new Promise(resolve => {
+            const reader = new FileReader();
+            reader.onload = e => resolve(String(e.target.result || ''));
+            reader.onerror = () => resolve('');
+            reader.readAsDataURL(file);
+        })));
+    }
+
+    function renderImageGallery(images) {
+        if (!Array.isArray(images) || !images.length) return '';
+        return `<div class="post-gallery">${images.map(src => `<img src="${src}" alt="Post image">`).join('')}</div>`;
+    }
+
+    async function submitPost(type) {
+        const base = {
+            id: nextId++,
+            type,
+            author: APP_USER,
+            createdAt: nowIso(),
+            likes: 0,
+            comments: 0
+        };
+
+        if (type === 'text') {
+            const text = document.getElementById('textInput').value.trim();
+            if (!text) {
+                alert('Please write an update first.');
+                return;
+            }
+            posts.push({
+                ...base,
+                text,
+                petId: Number(document.getElementById('textPetTag').value) || null
+            });
+            document.getElementById('textInput').value = '';
+            document.getElementById('textPetTag').value = '';
+        }
+
+        if (type === 'photo') {
+            const caption = document.getElementById('photoCaption').value.trim();
+            const previewVisible = !document.getElementById('photoPreviewBox').classList.contains('hidden');
+            const imageData = previewVisible ? document.getElementById('photoPreview').src : '';
+            if (!imageData && !caption) {
+                alert('Add a photo or caption before posting.');
+                return;
+            }
+            posts.push({
+                ...base,
+                text: caption,
+                imageData,
+                petId: Number(document.getElementById('photoPetTag').value) || null
+            });
+            document.getElementById('photoCaption').value = '';
+            document.getElementById('photoFile').value = '';
+            document.getElementById('photoPreviewBox').classList.add('hidden');
+            document.getElementById('photoPetTag').value = '';
+        }
+
+        if (type === 'lost') {
+            const lostName = document.getElementById('lostName').value.trim();
+            const lostLocation = document.getElementById('lostLocation').value.trim();
+            if (!lostName || !lostLocation) {
+                alert('For lost pets, please add name and last seen location.');
+                return;
+            }
+            if (!pendingLostImages.length) {
+                alert('Please upload at least one photo for the lost pet post.');
+                return;
+            }
+            posts.push({
+                ...base,
+                petId: Number(document.getElementById('lostPetTag').value) || null,
+                lostName,
+                lostSpecies: document.getElementById('lostSpecies').value,
+                lostBreed: document.getElementById('lostBreed').value.trim(),
+                lostColor: document.getElementById('lostColor').value.trim(),
+                lostLocation,
+                lostDate: document.getElementById('lostDate').value,
+                lostDesc: document.getElementById('lostDesc').value.trim(),
+                lostContact: document.getElementById('lostContact').value.trim(),
+                lostImages: [...pendingLostImages]
+            });
+            ['lostName', 'lostBreed', 'lostColor', 'lostLocation', 'lostDate', 'lostDesc', 'lostContact'].forEach(id => {
+                document.getElementById(id).value = '';
+            });
+            document.getElementById('lostPetTag').value = '';
+            clearPendingImages('lost');
+        }
+
+        if (type === 'found') {
+            const foundLocation = document.getElementById('foundLocation').value.trim();
+            if (!foundLocation) {
+                alert('Please add where this pet was found.');
+                return;
+            }
+            if (!pendingFoundImages.length) {
+                alert('Please upload at least one photo for the found pet post.');
+                return;
+            }
+            posts.push({
+                ...base,
+                petId: null,
+                foundSpecies: document.getElementById('foundSpecies').value,
+                foundColor: document.getElementById('foundColor').value.trim(),
+                foundLocation,
+                foundDate: document.getElementById('foundDate').value,
+                foundDesc: document.getElementById('foundDesc').value.trim(),
+                foundContact: document.getElementById('foundContact').value.trim(),
+                foundImages: [...pendingFoundImages]
+            });
+            ['foundColor', 'foundLocation', 'foundDate', 'foundDesc', 'foundContact'].forEach(id => {
+                document.getElementById(id).value = '';
+            });
+            clearPendingImages('found');
+        }
+
+        saveState();
+        renderPosts();
+    }
+
+    function toggleLike(postId) {
+        if (likedPosts.has(postId)) {
+            likedPosts.delete(postId);
+        } else {
+            likedPosts.add(postId);
+        }
+        saveState();
+        renderPosts();
+    }
+
+    function copyPostLink(postId) {
+        const link = `${window.location.origin}${window.location.pathname}#post-${postId}`;
+        navigator.clipboard.writeText(link)
+            .then(() => alert('Post link copied.'))
+            .catch(() => alert('Unable to copy link.'));
+    }
+
+    function contactNumber(number) {
+        if (!number) {
+            alert('No contact number provided for this post.');
+            return;
+        }
+        window.location.href = `tel:${number}`;
+    }
+
+    function openModal() {
+        document.getElementById('petModal').classList.add('show');
+    }
+
+    function closeModal() {
+        document.getElementById('petModal').classList.remove('show');
+    }
+
+    function closeModalOutside(event) {
+        if (event.target.id === 'petModal') {
+            closeModal();
+        }
+    }
+
+    function pickEmoji(event, element) {
+        event.preventDefault();
+        selectedEmoji = element.dataset.emoji || '🐶';
+        document.querySelectorAll('.emoji-opt').forEach(btn => btn.classList.remove('selected'));
+        element.classList.add('selected');
+    }
+
+    function savePet() {
+        const name = document.getElementById('newName').value.trim();
+        if (!name) {
+            alert('Pet name is required.');
+            return;
+        }
+
+        const pet = {
+            id: Date.now(),
+            name,
+            species: document.getElementById('newSpecies').value,
+            breed: document.getElementById('newBreed').value.trim(),
+            age: document.getElementById('newAge').value.trim(),
+            color: document.getElementById('newColor').value.trim(),
+            gender: document.getElementById('newGender').value,
+            weight: document.getElementById('newWeight').value.trim(),
+            chip: document.getElementById('newChip').value.trim(),
+            notes: document.getElementById('newNotes').value.trim(),
+            emoji: selectedEmoji
+        };
+
+        pets.push(pet);
+        activePetId = pet.id;
+        ['newName', 'newBreed', 'newAge', 'newColor', 'newWeight', 'newChip', 'newNotes'].forEach(id => {
+            document.getElementById(id).value = '';
+        });
+        saveState();
+        closeModal();
+        renderAll();
+    }
+
+    function renderAll() {
+        renderPets();
+        renderFeaturedPet();
+        renderHighlightPreview();
+        renderPosts();
+    }
+
+    document.getElementById('userAvatar').textContent = getInitials(APP_USER);
+    document.getElementById('lostPetTag').addEventListener('change', onLostPetTagChange);
+    loadState();
+    renderAll();
+</script>
+</body>
+</html>
