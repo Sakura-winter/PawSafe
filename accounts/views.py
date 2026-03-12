@@ -5,7 +5,10 @@ from rest_framework.response import Response
 from django.contrib.auth import authenticate
 from django.contrib.auth import login as django_login
 from django.contrib.auth.decorators import login_required
-from .serializers import RegisterSerializer, LoginSerializer
+from django.views.decorators.csrf import ensure_csrf_cookie
+from .serializers import RegisterSerializer, LoginSerializer, PetReportSerializer
+from .models import PetReport
+from rest_framework import generics, permissions
 from django.views.decorators.csrf import csrf_exempt
 from django.utils.decorators import method_decorator
 
@@ -40,6 +43,7 @@ class LoginView(APIView):
 
 # note to self: this is a protected view that requires authentication. If the user is not authenticated, they will be redirected to the login page.
 #we use @login_required so only authenticated users can access the dashboard page.
+@ensure_csrf_cookie
 @login_required(login_url='/accounts/login-page/')
 def dashboard_page(request):
     return render(request, 'dashboard.html')
@@ -48,6 +52,17 @@ def dashboard_page(request):
 @login_required(login_url='/accounts/login-page/')
 def user_page(request):
     return render(request, 'user.html')
+
+
+class PetReportListCreateView(generics.ListCreateAPIView):
+    queryset = PetReport.objects.all().order_by('-created_at')
+    serializer_class = PetReportSerializer
+    permission_classes = [permissions.IsAuthenticated]
+
+    def perform_create(self, serializer):
+        serializer.save(author=self.request.user)
+
+
 
 
 

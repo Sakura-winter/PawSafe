@@ -1,5 +1,5 @@
 from django.urls import path
-from .views import RegisterView, LoginView, register_page, login_page, dashboard_page, user_page
+from .views import RegisterView, LoginView, register_page, login_page, dashboard_page, user_page, PetReportListCreateView
 from rest_framework_simplejwt.views import TokenObtainPairView
 
 urlpatterns = [
@@ -10,4 +10,5 @@ urlpatterns = [
     path('dashboard/', dashboard_page, name='dashboard'),
     path('user/', user_page, name='user_page'),
     path('login-page/', login_page),
+    path('api/reports/', PetReportListCreateView.as_view(), name='pet-report'),
 ]

@@ -1,6 +1,6 @@
 from rest_framework import serializers
 from django.contrib.auth.models import User
-from .models import Profile
+from .models import PetReport, Profile
 class RegisterSerializer(serializers.ModelSerializer):
     password = serializers.CharField(write_only=True)
     phone_number = serializers.CharField(write_only=True)
@@ -27,3 +27,10 @@ class RegisterSerializer(serializers.ModelSerializer):
 class LoginSerializer(serializers.Serializer):
     username = serializers.CharField()
     password = serializers.CharField(write_only=True)
+
+#Pet Report Serializer
+class PetReportSerializer(serializers.ModelSerializer):
+    author = serializers.ReadOnlyField(source='author.username')
+    class Meta:
+        model = PetReport
+        fields = ['id', 'author', 'type', 'name', 'breed', 'color', 'location', 'contact_info', 'description', 'image', 'report_type', 'status', 'created_at']

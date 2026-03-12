@@ -1356,112 +1356,90 @@
         return `<div class="post-gallery">${images.map(src => `<img src="${src}" alt="Post image">`).join('')}</div>`;
     }
 
-    async function submitPost(type) {
-        const base = {
-            id: nextId++,
-            type,
-            author: APP_USER,
-            createdAt: nowIso(),
-            likes: 0,
-            comments: 0
-        };
+    function getCookie(name) {
+        const cookieValue = document.cookie
+            .split(';')
+            .map(cookie => cookie.trim())
+            .find(cookie => cookie.startsWith(`${name}=`));
 
-        if (type === 'text') {
-            const text = document.getElementById('textInput').value.trim();
-            if (!text) {
-                alert('Please write an update first.');
-                return;
-            }
-            posts.push({
-                ...base,
-                text,
-                petId: Number(document.getElementById('textPetTag').value) || null
-            });
-            document.getElementById('textInput').value = '';
-            document.getElementById('textPetTag').value = '';
+        if (!cookieValue) {
+            return '';
         }
 
-        if (type === 'photo') {
-            const caption = document.getElementById('photoCaption').value.trim();
-            const previewVisible = !document.getElementById('photoPreviewBox').classList.contains('hidden');
-            const imageData = previewVisible ? document.getElementById('photoPreview').src : '';
-            if (!imageData && !caption) {
-                alert('Add a photo or caption before posting.');
-                return;
-            }
-            posts.push({
-                ...base,
-                text: caption,
-                imageData,
-                petId: Number(document.getElementById('photoPetTag').value) || null
-            });
-            document.getElementById('photoCaption').value = '';
-            document.getElementById('photoFile').value = '';
-            document.getElementById('photoPreviewBox').classList.add('hidden');
-            document.getElementById('photoPetTag').value = '';
-        }
-
-        if (type === 'lost') {
-            const lostName = document.getElementById('lostName').value.trim();
-            const lostLocation = document.getElementById('lostLocation').value.trim();
-            if (!lostName || !lostLocation) {
-                alert('For lost pets, please add name and last seen location.');
-                return;
-            }
-            if (!pendingLostImages.length) {
-                alert('Please upload at least one photo for the lost pet post.');
-                return;
-            }
-            posts.push({
-                ...base,
-                petId: Number(document.getElementById('lostPetTag').value) || null,
-                lostName,
-                lostSpecies: document.getElementById('lostSpecies').value,
-                lostBreed: document.getElementById('lostBreed').value.trim(),
-                lostColor: document.getElementById('lostColor').value.trim(),
-                lostLocation,
-                lostDate: document.getElementById('lostDate').value,
-                lostDesc: document.getElementById('lostDesc').value.trim(),
-                lostContact: document.getElementById('lostContact').value.trim(),
-                lostImages: [...pendingLostImages]
-            });
-            ['lostName', 'lostBreed', 'lostColor', 'lostLocation', 'lostDate', 'lostDesc', 'lostContact'].forEach(id => {
-                document.getElementById(id).value = '';
-            });
-            document.getElementById('lostPetTag').value = '';
-            clearPendingImages('lost');
-        }
-
-        if (type === 'found') {
-            const foundLocation = document.getElementById('foundLocation').value.trim();
-            if (!foundLocation) {
-                alert('Please add where this pet was found.');
-                return;
-            }
-            if (!pendingFoundImages.length) {
-                alert('Please upload at least one photo for the found pet post.');
-                return;
-            }
-            posts.push({
-                ...base,
-                petId: null,
-                foundSpecies: document.getElementById('foundSpecies').value,
-                foundColor: document.getElementById('foundColor').value.trim(),
-                foundLocation,
-                foundDate: document.getElementById('foundDate').value,
-                foundDesc: document.getElementById('foundDesc').value.trim(),
-                foundContact: document.getElementById('foundContact').value.trim(),
-                foundImages: [...pendingFoundImages]
-            });
-            ['foundColor', 'foundLocation', 'foundDate', 'foundDesc', 'foundContact'].forEach(id => {
-                document.getElementById(id).value = '';
-            });
-            clearPendingImages('found');
-        }
-
-        saveState();
-        renderPosts();
+        return decodeURIComponent(cookieValue.split('=').slice(1).join('='));
     }
+
+    async function submitPost(type) {
+    const formData = new FormData();
+    const csrftoken = getCookie('csrftoken');
+
+    if (!csrftoken) {
+        alert('Your session is missing a CSRF token. Refresh the page and try again.');
+        return;
+    }
+
+    // Common fields for all reports
+    formData.append('report_type', type);
+
+    if (type === 'lost') {
+        const name = document.getElementById('lostName').value;
+        const species = document.getElementById('lostSpecies').value;
+        const location = document.getElementById('lostLocation').value;
+        const contact = document.getElementById('lostContact').value;
+        const files = document.getElementById('lostPhotos').files;
+
+        if (!name || !location || !contact) return alert("Please fill required fields.");
+
+        formData.append('name', name);
+        formData.append('type', species);
+        formData.append('breed', document.getElementById('lostBreed').value);
+        formData.append('color', document.getElementById('lostColor').value);
+        formData.append('location', location);
+        formData.append('contact_info', contact);
+        formData.append('description', document.getElementById('lostDesc').value);
+        
+        if (files.length > 0) formData.append('image', files[0]);
+
+    } else if (type === 'found') {
+        const species = document.getElementById('foundSpecies').value;
+        const location = document.getElementById('foundLocation').value;
+        const contact = document.getElementById('foundContact').value;
+        const files = document.getElementById('foundPhotos').files;
+
+        if (!location || !contact) return alert("Please fill location and contact.");
+
+        formData.append('type', species);
+        formData.append('color', document.getElementById('foundColor').value);
+        formData.append('location', location);
+        formData.append('contact_info', contact);
+        formData.append('description', document.getElementById('foundDesc').value);
+        
+        if (files.length > 0) formData.append('image', files[0]);
+    }
+
+    try {
+        const response = await fetch('/accounts/api/reports/', {
+            method: 'POST',
+            credentials: 'same-origin',
+            headers: {
+                'X-CSRFToken': csrftoken
+                // Note: Do NOT set 'Content-Type'. FormData sets it automatically with the boundary.
+            },
+            body: formData
+        });
+
+        if (response.ok) {
+            alert("Report submitted successfully! Waiting for admin approval.");
+            location.reload(); // Refresh to see the new post in the feed
+        } else {
+            const errorData = await response.json().catch(() => ({}));
+            console.error("Submission Error:", errorData);
+            alert(errorData.detail || "Failed to submit report. Check console for details.");
+        }
+    } catch (error) {
+        console.error("Network Error:", error);
+    }
+}
 
     function toggleLike(postId) {
         if (likedPosts.has(postId)) {
