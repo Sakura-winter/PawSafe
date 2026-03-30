@@ -80,6 +80,20 @@ input {
             text-align: center; margin-top: 20px; font-size: 0.85rem;
         }
         .footer-link a { color: var(--rust); text-decoration: none; font-weight: 700; }
+
+        .admin-toggle {
+            margin-top: 10px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 0.85rem;
+            color: #6B4A36;
+        }
+
+        .admin-toggle input {
+            width: auto;
+            margin: 0;
+        }
     </style>
 </head>
 <body>
@@ -99,6 +113,10 @@ input {
             <label>Password</label>
             <input type="password" id="password" placeholder="••••••••" required>
         </div>
+        <label class="admin-toggle">
+            <input type="checkbox" id="adminLogin">
+            Login as admin
+        </label>
         <button type="submit" class="btn-login">Sign In 🐾</button>
     </form>
 
@@ -113,6 +131,7 @@ input {
         
         const username = document.getElementById('username').value;
         const password = document.getElementById('password').value;
+        const adminLogin = document.getElementById('adminLogin').checked;
         const csrftoken = document.querySelector('[name=csrfmiddlewaretoken]').value;
 
         try {
@@ -123,7 +142,7 @@ input {
                     'X-CSRFToken': csrftoken
                 },
                 credentials: 'same-origin',
-                body: JSON.stringify({ username, password })
+                body: JSON.stringify({ username, password, admin_login: adminLogin })
             });
 
             const data = await response.json();
@@ -136,8 +155,7 @@ input {
                 }
                 
                 alert("Login Successful!");
-                // Redirecting to the dashboard as per your Weeks 3-4 timeline
-                window.location.href = "/accounts/dashboard/"; 
+                window.location.href = data.redirect_to || "/accounts/dashboard/";
             } else {
                 alert("Error: " + (data.message || data.detail || "Invalid credentials"));
             }

@@ -504,15 +504,11 @@
 
 <script>
 	const APP_USER = "{{ user.username|default:'User'|escapejs }}";
-	const DASHBOARD_KEY = `pawsafe_dashboard_${APP_USER}`;
-	const HIGHLIGHTS_KEY = `pawsafe_highlights_${APP_USER}`;
 
 	let activeTab = 'posts';
 	let selectedPetForHighlight = null;
-	let dashboardState = null;
-	let highlights = {};
-	let profilePostPreview = '';
-	let storyPreview = '';
+	let pets = [];
+	let reports = [];
 
 	function escapeHtml(v) {
 		return String(v || '')
@@ -540,34 +536,37 @@
 		return `${Math.floor(hr / 24)}d ago`;
 	}
 
-	function defaultDashboardState() {
-		return {
-			nextId: 1,
-			pets: [],
-			posts: []
-		};
+	function getCookie(name) {
+		const cookieValue = document.cookie
+			.split(';')
+			.map(cookie => cookie.trim())
+			.find(cookie => cookie.startsWith(`${name}=`));
+		return cookieValue ? decodeURIComponent(cookieValue.split('=').slice(1).join('=')) : '';
 	}
 
-	function loadData() {
-		try {
-			dashboardState = JSON.parse(localStorage.getItem(DASHBOARD_KEY) || 'null') || defaultDashboardState();
-		} catch (e) {
-			dashboardState = defaultDashboardState();
+	function findPetForReport(report) {
+		if (!report.name || !report.type) return null;
+		return pets.find(pet =>
+			pet.name.toLowerCase() === String(report.name || '').toLowerCase() &&
+			pet.species.toLowerCase() === String(report.type || '').toLowerCase()
+		) || null;
+	}
+
+	async function loadData() {
+		const [petResponse, reportResponse] = await Promise.all([
+			fetch('/accounts/api/pets/', { credentials: 'same-origin' }),
+			fetch('/accounts/api/reports/', { credentials: 'same-origin' })
+		]);
+
+		if (!petResponse.ok || !reportResponse.ok) {
+			throw new Error('Failed to load profile data.');
 		}
 
-		try {
-			highlights = JSON.parse(localStorage.getItem(HIGHLIGHTS_KEY) || '{}') || {};
-		} catch (e) {
-			highlights = {};
-		}
-	}
-
-	function saveDashboard() {
-		localStorage.setItem(DASHBOARD_KEY, JSON.stringify(dashboardState));
-	}
-
-	function saveHighlightsState() {
-		localStorage.setItem(HIGHLIGHTS_KEY, JSON.stringify(highlights));
+		pets = await petResponse.json();
+		reports = await reportResponse.json();
+		renderProfileHeader();
+		renderHighlights();
+		renderPostGrid();
 	}
 
 	function renderProfileHeader() {
@@ -575,17 +574,16 @@
 		document.getElementById('profileAvatar').textContent = initials(APP_USER);
 		document.getElementById('profileBio').textContent = `${APP_USER} on PawSafe. Tracking pets, posting updates, and helping reunite lost companions.`;
 
-		const myPosts = dashboardState.posts.filter(post => post.author === APP_USER);
-		const storyCount = Object.values(highlights).reduce((acc, items) => acc + (Array.isArray(items) ? items.length : 0), 0);
+		const myPosts = reports.filter(post => post.author === APP_USER);
+		const storyCount = myPosts.filter(post => post.report_type === 'photo').length;
 
 		document.getElementById('statPosts').textContent = String(myPosts.length);
-		document.getElementById('statPets').textContent = String(dashboardState.pets.length);
+		document.getElementById('statPets').textContent = String(pets.length);
 		document.getElementById('statStories').textContent = String(storyCount);
 	}
 
 	function renderHighlights() {
 		const wrap = document.getElementById('petHighlights');
-		const pets = dashboardState.pets;
 
 		if (!pets.length) {
 			wrap.innerHTML = '<div class="highlight"><div class="highlight-ring"><div class="highlight-inner">+</div></div><div class="highlight-name">Add pets from dashboard</div></div>';
@@ -593,11 +591,16 @@
 		}
 
 		wrap.innerHTML = pets.map(pet => {
-			const count = Array.isArray(highlights[String(pet.id)]) ? highlights[String(pet.id)].length : 0;
+			const count = reports.filter(report =>
+				report.author === APP_USER &&
+				String(report.name || '').toLowerCase() === pet.name.toLowerCase() &&
+				String(report.type || '').toLowerCase() === pet.species.toLowerCase()
+			).length;
+
 			return `
 				<div class="highlight" onclick="openHighlightModal(${pet.id})">
 					<div class="highlight-ring">
-						<div class="highlight-inner">${escapeHtml(pet.emoji || '🐾')}</div>
+						<div class="highlight-inner">${escapeHtml(pet.emoji || 'pet')}</div>
 						<div class="story-count">${count}</div>
 					</div>
 					<div class="highlight-name">${escapeHtml(pet.name)}</div>
@@ -606,7 +609,7 @@
 		}).join('');
 
 		const petTag = document.getElementById('newPostPetTag');
-		petTag.innerHTML = '<option value="">Tag pet</option>' + pets.map(pet => `<option value="${pet.id}">${escapeHtml(pet.emoji || '🐾')} ${escapeHtml(pet.name)}</option>`).join('');
+		petTag.innerHTML = '<option value="">Tag pet</option>' + pets.map(pet => `<option value="${pet.id}">${escapeHtml(pet.emoji || 'pet')} ${escapeHtml(pet.name)}</option>`).join('');
 	}
 
 	function openProfilePostComposer() {
@@ -619,49 +622,54 @@
 		if (!file) return;
 		const reader = new FileReader();
 		reader.onload = e => {
-			profilePostPreview = e.target.result;
-			document.getElementById('newPostPreview').src = profilePostPreview;
+			document.getElementById('newPostPreview').src = String(e.target.result || '');
 			document.getElementById('newPostPreviewWrap').classList.remove('hidden');
 		};
 		reader.readAsDataURL(file);
 	}
 
-	function publishProfilePost() {
+	async function publishProfilePost() {
 		const text = document.getElementById('newPostText').value.trim();
-		const petId = Number(document.getElementById('newPostPetTag').value) || null;
+		const file = document.getElementById('newPostFile').files[0];
 		const selectedType = document.getElementById('newPostType').value;
-		const type = profilePostPreview || selectedType === 'photo' ? 'photo' : 'text';
+		const petId = Number(document.getElementById('newPostPetTag').value) || null;
+		const pet = pets.find(item => item.id === petId);
+		const reportType = file || selectedType === 'photo' ? 'photo' : 'text';
 
-		if (!text && !profilePostPreview) {
+		if (!text && !file) {
 			alert('Add text or photo for the post.');
 			return;
 		}
 
-		const post = {
-			id: Number(dashboardState.nextId || 1),
-			type,
-			author: APP_USER,
-			petId,
-			text,
-			imageData: profilePostPreview,
-			likes: 0,
-			comments: 0,
-			createdAt: new Date().toISOString()
-		};
+		const formData = new FormData();
+		formData.append('report_type', reportType);
+		formData.append('description', text);
+		formData.append('type', pet ? pet.species : 'Pet');
+		formData.append('name', pet ? pet.name : '');
+		formData.append('breed', pet ? pet.breed : '');
+		formData.append('color', pet ? pet.color : '');
+		formData.append('location', 'Community Feed');
+		formData.append('contact_info', 'Not provided');
+		if (file) formData.append('image', file);
 
-		dashboardState.nextId = post.id + 1;
-		dashboardState.posts.push(post);
-		saveDashboard();
+		const response = await fetch('/accounts/api/reports/', {
+			method: 'POST',
+			credentials: 'same-origin',
+			headers: { 'X-CSRFToken': getCookie('csrftoken') },
+			body: formData
+		});
+
+		if (!response.ok) {
+			alert('Unable to publish post.');
+			return;
+		}
 
 		document.getElementById('newPostText').value = '';
 		document.getElementById('newPostFile').value = '';
 		document.getElementById('newPostType').value = 'text';
 		document.getElementById('newPostPetTag').value = '';
 		document.getElementById('newPostPreviewWrap').classList.add('hidden');
-		profilePostPreview = '';
-
-		renderProfileHeader();
-		renderPostGrid();
+		await loadData();
 	}
 
 	function setTab(tab, button) {
@@ -679,39 +687,29 @@
 	}
 
 	function tileBody(post) {
-		if (post.type === 'photo' && post.imageData) {
-			return `<img src="${post.imageData}" alt="post image">`;
+		if (post.image) {
+			return `<img src="${escapeHtml(post.image)}" alt="post image">`;
 		}
 
-		if (post.type === 'lost') {
-			if (Array.isArray(post.lostImages) && post.lostImages.length) {
-				return `<img src="${post.lostImages[0]}" alt="lost pet image">`;
-			}
-			return `<div class="tile-content" style="background:#faeee8;height:100%;"><strong>Missing ${escapeHtml(post.lostName || '')}</strong><br>${escapeHtml(post.lostLocation || '')}</div>`;
+		if (post.report_type === 'lost') {
+			return `<div class="tile-content" style="background:#faeee8;height:100%;"><strong>Missing ${escapeHtml(post.name || '')}</strong><br>${escapeHtml(post.location || '')}</div>`;
 		}
 
-		if (post.type === 'found') {
-			if (Array.isArray(post.foundImages) && post.foundImages.length) {
-				return `<img src="${post.foundImages[0]}" alt="found pet image">`;
-			}
-			return `<div class="tile-content" style="background:#edf5ed;height:100%;"><strong>Found ${escapeHtml(post.foundSpecies || 'pet')}</strong><br>${escapeHtml(post.foundLocation || '')}</div>`;
+		if (post.report_type === 'found') {
+			return `<div class="tile-content" style="background:#edf5ed;height:100%;"><strong>Found ${escapeHtml(post.type || 'pet')}</strong><br>${escapeHtml(post.location || '')}</div>`;
 		}
 
-		if (post.type === 'photo') {
-			return `<div class="tile-content" style="height:100%;display:flex;align-items:center;justify-content:center;font-size:3rem;">🐾</div>`;
-		}
-
-		return `<div class="tile-content">${escapeHtml(post.text || '')}</div>`;
+		return `<div class="tile-content">${escapeHtml(post.description || '')}</div>`;
 	}
 
 	function renderPostGrid() {
 		const grid = document.getElementById('profileGrid');
-		let myPosts = dashboardState.posts.filter(post => post.author === APP_USER);
+		let myPosts = reports.filter(post => post.author === APP_USER);
 
 		if (activeTab === 'posts') {
-			myPosts = myPosts.filter(post => post.type === 'text' || post.type === 'photo');
+			myPosts = myPosts.filter(post => post.report_type === 'text' || post.report_type === 'photo');
 		} else {
-			myPosts = myPosts.filter(post => post.type === 'lost' || post.type === 'found');
+			myPosts = myPosts.filter(post => post.report_type === 'lost' || post.report_type === 'found');
 		}
 
 		if (!myPosts.length) {
@@ -719,17 +717,17 @@
 			return;
 		}
 
-		grid.innerHTML = myPosts.slice().reverse().map(post => `
-			<article class="tile" title="${escapeHtml(post.text || '')}">
+		grid.innerHTML = myPosts.map(post => `
+			<article class="tile" title="${escapeHtml(post.description || '')}">
 				${tileBody(post)}
-				<div class="tile-badge">${tileBadge(post.type)}</div>
+				<div class="tile-badge">${tileBadge(post.report_type)}</div>
 			</article>
 		`).join('');
 	}
 
 	function openHighlightModal(petId) {
 		selectedPetForHighlight = petId;
-		const pet = dashboardState.pets.find(item => item.id === petId);
+		const pet = pets.find(item => item.id === petId);
 		document.getElementById('highlightTitle').textContent = pet ? `${pet.name} Highlights` : 'Pet Highlights';
 		document.getElementById('highlightModal').classList.add('show');
 		renderStoryList();
@@ -737,16 +735,13 @@
 
 	function closeHighlightModal() {
 		document.getElementById('highlightModal').classList.remove('show');
-		storyPreview = '';
 		document.getElementById('storyFile').value = '';
 		document.getElementById('storyCaption').value = '';
 		document.getElementById('storyPreviewWrap').classList.add('hidden');
 	}
 
 	function closeHighlightModalOutside(event) {
-		if (event.target.id === 'highlightModal') {
-			closeHighlightModal();
-		}
+		if (event.target.id === 'highlightModal') closeHighlightModal();
 	}
 
 	function previewStory(event) {
@@ -754,82 +749,93 @@
 		if (!file) return;
 		const reader = new FileReader();
 		reader.onload = e => {
-			storyPreview = e.target.result;
-			document.getElementById('storyPreview').src = storyPreview;
+			document.getElementById('storyPreview').src = String(e.target.result || '');
 			document.getElementById('storyPreviewWrap').classList.remove('hidden');
 		};
 		reader.readAsDataURL(file);
 	}
 
-	function saveStory() {
+	async function saveStory() {
 		if (!selectedPetForHighlight) return;
-		if (!storyPreview) {
+		const pet = pets.find(item => item.id === selectedPetForHighlight);
+		const file = document.getElementById('storyFile').files[0];
+		const caption = document.getElementById('storyCaption').value.trim();
+
+		if (!pet || !file) {
 			alert('Upload a story image first.');
 			return;
 		}
 
-		const caption = document.getElementById('storyCaption').value.trim();
-		const key = String(selectedPetForHighlight);
-		if (!Array.isArray(highlights[key])) highlights[key] = [];
+		const formData = new FormData();
+		formData.append('report_type', 'photo');
+		formData.append('description', caption);
+		formData.append('type', pet.species);
+		formData.append('name', pet.name);
+		formData.append('breed', pet.breed || '');
+		formData.append('color', pet.color || '');
+		formData.append('location', 'Community Feed');
+		formData.append('contact_info', 'Not provided');
+		formData.append('image', file);
 
-		highlights[key].push({
-			imageData: storyPreview,
-			caption,
-			createdAt: new Date().toISOString()
+		const response = await fetch('/accounts/api/reports/', {
+			method: 'POST',
+			credentials: 'same-origin',
+			headers: { 'X-CSRFToken': getCookie('csrftoken') },
+			body: formData
 		});
 
-		saveHighlightsState();
-		renderStoryList();
-		renderHighlights();
-		renderProfileHeader();
+		if (!response.ok) {
+			alert('Unable to save story.');
+			return;
+		}
 
-		storyPreview = '';
 		document.getElementById('storyFile').value = '';
 		document.getElementById('storyCaption').value = '';
 		document.getElementById('storyPreviewWrap').classList.add('hidden');
+		await loadData();
+		renderStoryList();
 	}
 
-	function deleteStory(index) {
-		const key = String(selectedPetForHighlight);
-		if (!Array.isArray(highlights[key])) return;
-		highlights[key].splice(index, 1);
-		saveHighlightsState();
-		renderStoryList();
-		renderHighlights();
-		renderProfileHeader();
+	function deleteStory() {
+		alert('Story delete is not available yet.');
 	}
 
 	function renderStoryList() {
 		const list = document.getElementById('storyList');
-		const key = String(selectedPetForHighlight);
-		const stories = Array.isArray(highlights[key]) ? highlights[key] : [];
+		const pet = pets.find(item => item.id === selectedPetForHighlight);
+		if (!pet) {
+			list.innerHTML = '<p style="color:var(--bark-light);font-size:0.86rem;">Select a pet to view highlights.</p>';
+			return;
+		}
+
+		const stories = reports.filter(report =>
+			report.author === APP_USER &&
+			report.report_type === 'photo' &&
+			String(report.name || '').toLowerCase() === pet.name.toLowerCase() &&
+			String(report.type || '').toLowerCase() === pet.species.toLowerCase()
+		);
 
 		if (!stories.length) {
 			list.innerHTML = '<p style="color:var(--bark-light);font-size:0.86rem;">No stories yet. Upload first highlight for this pet.</p>';
 			return;
 		}
 
-		list.innerHTML = stories.slice().reverse().map((story, idx) => {
-			const actualIndex = stories.length - 1 - idx;
-			return `
-				<article class="story-card">
-					<img src="${story.imageData}" alt="story image">
-					<div class="story-info">
-						${story.caption ? `<div>${escapeHtml(story.caption)}</div>` : '<div>No caption</div>'}
-						<div style="margin-top:4px;display:flex;justify-content:space-between;align-items:center;">
-							<span>${ago(story.createdAt)}</span>
-							<button class="btn" type="button" onclick="deleteStory(${actualIndex})">Delete</button>
-						</div>
+		list.innerHTML = stories.map(story => `
+			<article class="story-card">
+				${story.image ? `<img src="${escapeHtml(story.image)}" alt="story image">` : ''}
+				<div class="story-info">
+					${story.description ? `<div>${escapeHtml(story.description)}</div>` : '<div>No caption</div>'}
+					<div style="margin-top:4px;display:flex;justify-content:space-between;align-items:center;">
+						<span>${ago(story.created_at)}</span>
 					</div>
-				</article>
-			`;
-		}).join('');
+				</div>
+			</article>
+		`).join('');
 	}
 
-	loadData();
-	renderProfileHeader();
-	renderHighlights();
-	renderPostGrid();
+	loadData().catch(() => {
+		document.getElementById('profileGrid').innerHTML = '<div class="empty">Unable to load live profile data.</div>';
+	});
 </script>
 </body>
 </html>

@@ -697,6 +697,111 @@
             display: none;
         }
 
+        .side-panel {
+            position: fixed;
+            top: 68px;
+            right: 14px;
+            width: min(420px, calc(100vw - 28px));
+            max-height: calc(100vh - 90px);
+            overflow: auto;
+            background: var(--card-bg);
+            border: 2px solid var(--bark);
+            border-radius: 16px;
+            box-shadow: 4px 4px 0 var(--bark);
+            z-index: 90;
+            display: none;
+        }
+
+        .side-panel.show {
+            display: block;
+        }
+
+        .panel-head {
+            position: sticky;
+            top: 0;
+            z-index: 2;
+            background: var(--card-bg);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 12px;
+            border-bottom: 1px solid var(--border);
+            font-family: 'Fraunces', serif;
+            font-weight: 700;
+        }
+
+        .panel-body {
+            padding: 10px;
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+
+        .mini-card {
+            border: 1px solid var(--border);
+            border-radius: 10px;
+            background: var(--warm);
+            padding: 9px;
+            font-size: 0.86rem;
+        }
+
+        .panel-input {
+            width: 100%;
+            border: 1px solid var(--border);
+            border-radius: 10px;
+            padding: 8px;
+            font-family: inherit;
+            background: #fff;
+        }
+
+        .claim-status {
+            border-radius: 999px;
+            padding: 2px 8px;
+            font-size: 0.72rem;
+            font-weight: 700;
+            background: #ffe9b8;
+        }
+
+        .claim-status.accepted {
+            background: #d9efde;
+        }
+
+        .claim-status.rejected {
+            background: #f8dcdc;
+        }
+
+        .message-box {
+            border: 1px solid var(--border);
+            border-radius: 10px;
+            background: #fff;
+            max-height: 150px;
+            overflow: auto;
+            padding: 8px;
+            margin-bottom: 8px;
+        }
+
+        .message-row {
+            margin-bottom: 6px;
+            padding: 6px;
+            border-radius: 8px;
+            background: #f8f1e7;
+            font-size: 0.82rem;
+        }
+
+        .count-badge {
+            min-width: 20px;
+            height: 20px;
+            border-radius: 999px;
+            background: var(--rust);
+            color: #fff;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 0.72rem;
+            font-weight: 700;
+            margin-left: 6px;
+        }
+
         @media (max-width: 900px) {
             .sidebar {
                 display: none;
@@ -734,6 +839,11 @@
         <button class="ntab" data-tab="pets" onclick="setTab('pets', this)">My Pets</button>
     </div>
     <div class="nav-actions">
+        {% if user.is_staff or user.is_superuser %}
+            <a class="btn-top profile" href="/accounts/admin-requests/">Admin Panel</a>
+        {% endif %}
+        <button class="btn-top profile" type="button" onclick="openClaimInbox()">Claims Inbox</button>
+        <button class="btn-top profile" type="button" onclick="toggleNotifications()">Notifications <span id="notifUnreadCount" class="count-badge">0</span></button>
         <a class="btn-top profile" href="/accounts/user/">Profile</a>
         <button class="btn-top" onclick="openModal()">+ Add Pet</button>
         <a class="user-avatar" id="userAvatar" href="/accounts/user/" style="text-decoration:none;"></a>
@@ -892,23 +1002,55 @@
     </div>
 </div>
 
+<div class="modal-wrap" id="claimModal" onclick="closeClaimModalOutside(event)">
+    <div class="modal">
+        <div class="modal-head">
+            Raise Claim Request
+            <button class="filter-btn" type="button" onclick="closeClaimModal()">Close</button>
+        </div>
+        <div class="modal-body">
+            <input id="claimPetName" placeholder="Your pet name">
+            <textarea id="claimDetails" rows="3" placeholder="Share details about the pet (age, markings, behavior, collar, etc.)"></textarea>
+            <textarea id="claimProof" rows="3" placeholder="What proof can confirm this is your pet?"></textarea>
+            <textarea id="claimMessage" rows="2" placeholder="Message for admin"></textarea>
+            <button class="btn-main" type="button" onclick="submitClaim()">Send Claim</button>
+        </div>
+    </div>
+</div>
+
+<section class="side-panel" id="notificationsPanel">
+    <div class="panel-head">
+        Notifications
+        <div style="display:flex; gap:6px;">
+            <button class="filter-btn" type="button" onclick="bulkNotificationAction('mark_read')">Read All</button>
+            <button class="filter-btn" type="button" onclick="bulkNotificationAction('mark_unread')">Unread All</button>
+            <button class="filter-btn" type="button" onclick="toggleNotifications(false)">Close</button>
+        </div>
+    </div>
+    <div id="notificationsBody" class="panel-body"></div>
+</section>
+
+<section class="side-panel" id="claimInboxPanel" style="right: auto; left: 14px;">
+    <div class="panel-head">
+        Claim Inbox
+        <button class="filter-btn" type="button" onclick="closeClaimInbox()">Close</button>
+    </div>
+    <div id="claimInboxBody" class="panel-body"></div>
+</section>
+
 <script>
     const APP_USER = "{{ user.username|default:'User'|escapejs }}";
-    const STORAGE_KEY = `pawsafe_dashboard_${APP_USER}`;
-    const HIGHLIGHTS_KEY = `pawsafe_highlights_${APP_USER}`;
 
     let composerType = 'text';
-    let selectedEmoji = '🐶';
+    let selectedEmoji = 'dog';
     let currentTab = 'feed';
     let currentFilter = 'all';
     let activePetId = null;
     let pets = [];
     let posts = [];
-    let likedPosts = new Set();
-    let highlights = {};
-    let pendingLostImages = [];
-    let pendingFoundImages = [];
-    let nextId = 1;
+    let notifications = [];
+    let myClaims = [];
+    let selectedReportForClaim = null;
 
     function escapeHtml(value) {
         return String(value || '')
@@ -924,10 +1066,6 @@
         return parts.slice(0, 2).map(p => p[0].toUpperCase()).join('') || 'U';
     }
 
-    function nowIso() {
-        return new Date().toISOString();
-    }
-
     function timeAgo(isoTime) {
         const past = new Date(isoTime).getTime();
         if (!past) return 'just now';
@@ -937,86 +1075,206 @@
         if (mins < 60) return `${mins}m ago`;
         const hours = Math.floor(mins / 60);
         if (hours < 24) return `${hours}h ago`;
-        const days = Math.floor(hours / 24);
-        return `${days}d ago`;
+        return `${Math.floor(hours / 24)}d ago`;
     }
 
-    function defaultState() {
-        return {
-            nextId: 6,
-            activePetId: 1,
-            likedPostIds: [],
-            pets: [
-                {
-                    id: 1,
-                    name: 'Buddy',
-                    species: 'Dog',
-                    breed: 'Labrador',
-                    age: '3 years',
-                    color: 'Golden',
-                    gender: 'Male',
-                    weight: '28 kg',
-                    chip: 'MC-1928',
-                    notes: 'Vaccinated and playful.',
-                    emoji: '🐶'
-                },
-                {
-                    id: 2,
-                    name: 'Whiskers',
-                    species: 'Cat',
-                    breed: 'Persian',
-                    age: '5 years',
-                    color: 'White',
-                    gender: 'Female',
-                    weight: '4 kg',
-                    chip: '',
-                    notes: 'Indoor only.',
-                    emoji: '🐱'
-                }
-            ],
-            posts: [
-                { id: 1, type: 'photo', author: APP_USER, petId: 1, text: 'Morning walk win.', likes: 14, comments: 3, imageData: '', createdAt: nowIso() },
-                { id: 2, type: 'lost', author: 'Community Alert', petId: null, lostName: 'Mochi', lostSpecies: 'Cat', lostBreed: 'Siamese', lostColor: 'Cream', lostLocation: 'Elm Street', lostDate: '2026-03-01', lostDesc: 'Blue collar with bell.', lostContact: '555-0123', likes: 29, comments: 8, createdAt: nowIso() },
-                { id: 3, type: 'text', author: APP_USER, petId: 2, text: 'Whiskers stole another treat.', likes: 22, comments: 5, createdAt: nowIso() },
-                { id: 4, type: 'found', author: 'Sam R.', petId: null, foundSpecies: 'Dog', foundColor: 'Brown and white', foundLocation: 'Central Park', foundDate: '2026-03-02', foundDesc: 'Friendly and safe.', foundContact: '555-0456', likes: 18, comments: 6, createdAt: nowIso() },
-                { id: 5, type: 'photo', author: APP_USER, petId: 2, text: 'Sunday nap mode.', likes: 31, comments: 4, imageData: '', createdAt: nowIso() }
-            ]
-        };
+    function getCookie(name) {
+        const cookieValue = document.cookie
+            .split(';')
+            .map(cookie => cookie.trim())
+            .find(cookie => cookie.startsWith(`${name}=`));
+        return cookieValue ? decodeURIComponent(cookieValue.split('=').slice(1).join('=')) : '';
     }
 
-    function loadState() {
-        try {
-            const raw = localStorage.getItem(STORAGE_KEY);
-            const state = raw ? JSON.parse(raw) : defaultState();
-            pets = Array.isArray(state.pets) ? state.pets : [];
-            posts = Array.isArray(state.posts) ? state.posts : [];
-            nextId = Number(state.nextId || 1);
-            activePetId = state.activePetId || (pets[0] ? pets[0].id : null);
-            likedPosts = new Set(Array.isArray(state.likedPostIds) ? state.likedPostIds : []);
-        } catch (err) {
-            pets = defaultState().pets;
-            posts = defaultState().posts;
-            nextId = defaultState().nextId;
-            activePetId = defaultState().activePetId;
-            likedPosts = new Set();
+    function findTaggedPet(post) {
+        if (!post.name || !post.type) return null;
+        return pets.find(pet =>
+            pet.name.toLowerCase() === String(post.name || '').toLowerCase() &&
+            pet.species.toLowerCase() === String(post.type || '').toLowerCase()
+        ) || null;
+    }
+
+    async function loadFromApi() {
+        const [petResponse, reportResponse] = await Promise.all([
+            fetch('/accounts/api/pets/', { credentials: 'same-origin' }),
+            fetch('/accounts/api/reports/', { credentials: 'same-origin' })
+        ]);
+
+        if (!petResponse.ok || !reportResponse.ok) {
+            throw new Error('Failed to fetch data');
         }
 
-        try {
-            const rawHighlights = localStorage.getItem(HIGHLIGHTS_KEY);
-            highlights = rawHighlights ? JSON.parse(rawHighlights) : {};
-        } catch (err) {
-            highlights = {};
-        }
+        pets = await petResponse.json();
+        posts = await reportResponse.json();
+        activePetId = activePetId || (pets[0] ? pets[0].id : null);
+        await Promise.all([loadNotifications(), loadMyClaims()]);
+        renderAll();
     }
 
-    function saveState() {
-        localStorage.setItem(STORAGE_KEY, JSON.stringify({
-            pets,
-            posts,
-            nextId,
-            activePetId,
-            likedPostIds: Array.from(likedPosts)
-        }));
+    async function loadNotifications() {
+        const response = await fetch('/accounts/api/notifications/', { credentials: 'same-origin' });
+        if (!response.ok) {
+            notifications = [];
+            return;
+        }
+        notifications = await response.json();
+        renderNotifications();
+    }
+
+    async function markNotificationRead(notificationId) {
+        await fetch(`/accounts/api/notifications/${notificationId}/read/`, {
+            method: 'PATCH',
+            credentials: 'same-origin',
+            headers: { 'X-CSRFToken': getCookie('csrftoken') }
+        });
+        await loadNotifications();
+    }
+
+    function renderNotifications() {
+        const body = document.getElementById('notificationsBody');
+        const unreadCount = notifications.filter(item => !item.is_read).length;
+        const unreadEl = document.getElementById('notifUnreadCount');
+        unreadEl.textContent = String(unreadCount);
+        unreadEl.style.display = unreadCount ? 'inline-flex' : 'none';
+
+        if (!notifications.length) {
+            body.innerHTML = '<div class="mini-card">No notifications yet.</div>';
+            return;
+        }
+
+        body.innerHTML = notifications.map(item => `
+            <article class="mini-card">
+                <div style="font-weight:700;">${escapeHtml(item.title)}</div>
+                <div style="margin-top:4px;">${escapeHtml(item.message)}</div>
+                <div class="small" style="margin-top:6px;display:flex;justify-content:space-between;align-items:center;">
+                    <span>${timeAgo(item.created_at)}</span>
+                    ${item.is_read ? '<span>Read</span>' : `<button class="filter-btn" type="button" onclick="markNotificationRead(${item.id})">Mark Read</button>`}
+                </div>
+            </article>
+        `).join('');
+    }
+
+    function toggleNotifications(forceOpen) {
+        const panel = document.getElementById('notificationsPanel');
+        if (forceOpen === false) {
+            panel.classList.remove('show');
+            return;
+        }
+        panel.classList.toggle('show');
+    }
+
+    async function bulkNotificationAction(action) {
+        const response = await fetch('/accounts/api/notifications/bulk/', {
+            method: 'PATCH',
+            credentials: 'same-origin',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': getCookie('csrftoken')
+            },
+            body: JSON.stringify({ action })
+        });
+
+        if (!response.ok) {
+            alert('Unable to update notifications.');
+            return;
+        }
+        await loadNotifications();
+    }
+
+    async function loadMyClaims() {
+        const response = await fetch('/accounts/api/claims/', { credentials: 'same-origin' });
+        if (!response.ok) {
+            myClaims = [];
+            return;
+        }
+        myClaims = await response.json();
+        renderClaimInbox();
+    }
+
+    function openClaimInbox() {
+        document.getElementById('claimInboxPanel').classList.add('show');
+        renderClaimInbox();
+    }
+
+    function closeClaimInbox() {
+        document.getElementById('claimInboxPanel').classList.remove('show');
+    }
+
+    function renderClaimInbox() {
+        const body = document.getElementById('claimInboxBody');
+        if (!myClaims.length) {
+            body.innerHTML = '<div class="mini-card">No claims raised yet.</div>';
+            return;
+        }
+
+        body.innerHTML = myClaims.map(claim => `
+            <article class="mini-card">
+                <div style="display:flex;justify-content:space-between;gap:8px;align-items:center;">
+                    <strong>Claim #${claim.id}</strong>
+                    <span class="claim-status ${escapeHtml(claim.status)}">${escapeHtml(claim.status)}</span>
+                </div>
+                <div class="small" style="margin-top:4px;">Pet: ${escapeHtml(claim.pet_name)} | Report #${claim.report}</div>
+                <div class="small" style="margin-top:4px;">${escapeHtml(claim.admin_reply || 'No admin reply yet.')}</div>
+                <div style="margin-top:8px;" class="message-box" id="claimMessageBox-${claim.id}">Loading chat...</div>
+                <textarea class="panel-input" rows="2" id="claimInput-${claim.id}" placeholder="Send message to admin"></textarea>
+                <div style="display:flex;justify-content:flex-end;margin-top:6px;">
+                    <button class="btn-main" type="button" onclick="sendClaimMessage(${claim.id})">Send</button>
+                </div>
+            </article>
+        `).join('');
+
+        myClaims.forEach(claim => {
+            loadClaimMessages(claim.id);
+        });
+    }
+
+    async function loadClaimMessages(claimId) {
+        const response = await fetch(`/accounts/api/claims/${claimId}/messages/`, { credentials: 'same-origin' });
+        const box = document.getElementById(`claimMessageBox-${claimId}`);
+        if (!box) return;
+        if (!response.ok) {
+            box.innerHTML = 'Unable to load messages.';
+            return;
+        }
+
+        const messages = await response.json();
+        if (!messages.length) {
+            box.innerHTML = 'No messages yet.';
+            return;
+        }
+
+        box.innerHTML = messages.map(msg => `
+            <div class="message-row">
+                <div style="font-weight:700;font-size:0.72rem;">${escapeHtml(msg.sender)}</div>
+                <div>${escapeHtml(msg.message)}</div>
+            </div>
+        `).join('');
+        box.scrollTop = box.scrollHeight;
+    }
+
+    async function sendClaimMessage(claimId) {
+        const input = document.getElementById(`claimInput-${claimId}`);
+        if (!input) return;
+        const message = input.value.trim();
+        if (!message) return;
+
+        const response = await fetch(`/accounts/api/claims/${claimId}/messages/`, {
+            method: 'POST',
+            credentials: 'same-origin',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': getCookie('csrftoken')
+            },
+            body: JSON.stringify({ message })
+        });
+
+        if (!response.ok) {
+            alert('Unable to send claim message.');
+            return;
+        }
+
+        input.value = '';
+        await loadClaimMessages(claimId);
     }
 
     function renderPets() {
@@ -1028,7 +1286,7 @@
             const selectedClass = activePetId === pet.id ? ' selected' : '';
             el.className = `pet-card${selectedClass}`;
             el.innerHTML = `
-                <div class="pet-avatar">${escapeHtml(pet.emoji)}</div>
+                <div class="pet-avatar">${escapeHtml(pet.emoji || 'pet')}</div>
                 <div class="pet-info">
                     <div class="pet-name">${escapeHtml(pet.name)}</div>
                     <div class="pet-sub">${escapeHtml(pet.breed || pet.species)}${pet.age ? ` • ${escapeHtml(pet.age)}` : ''}</div>
@@ -1039,11 +1297,10 @@
                 activePetId = pet.id;
                 renderPets();
                 renderFeaturedPet();
-                saveState();
             });
-            el.querySelector('.remove-pet').addEventListener('click', (event) => {
+            el.querySelector('.remove-pet').addEventListener('click', async event => {
                 event.stopPropagation();
-                removePet(pet.id);
+                await removePet(pet.id, pet.name);
             });
             petList.appendChild(el);
         });
@@ -1063,7 +1320,7 @@
         const pet = pets.find(p => p.id === activePetId) || pets[0];
         activePetId = pet.id;
         holder.innerHTML = `
-            <div class="featured-name">${escapeHtml(pet.emoji)} ${escapeHtml(pet.name)}</div>
+            <div class="featured-name">${escapeHtml(pet.emoji || 'pet')} ${escapeHtml(pet.name)}</div>
             <div class="featured-meta">${escapeHtml(pet.species)}${pet.breed ? ` • ${escapeHtml(pet.breed)}` : ''}</div>
             <div class="tags">
                 ${pet.age ? `<span class="tag">Age: ${escapeHtml(pet.age)}</span>` : ''}
@@ -1084,12 +1341,17 @@
         }
 
         container.innerHTML = pets.map(pet => {
-            const stories = Array.isArray(highlights[String(pet.id)]) ? highlights[String(pet.id)] : [];
+            const count = posts.filter(post =>
+                post.author === APP_USER &&
+                String(post.name || '').toLowerCase() === pet.name.toLowerCase() &&
+                String(post.type || '').toLowerCase() === pet.species.toLowerCase()
+            ).length;
+
             return `
                 <a class="mini-highlight" href="/accounts/user/" title="Open ${escapeHtml(pet.name)} highlight">
                     <div class="mini-ring">
-                        <div class="mini-inner">${escapeHtml(pet.emoji || '🐾')}</div>
-                        <div class="mini-count">${stories.length}</div>
+                        <div class="mini-inner">${escapeHtml(pet.emoji || 'pet')}</div>
+                        <div class="mini-count">${count}</div>
                     </div>
                     <div class="mini-name">${escapeHtml(pet.name)}</div>
                 </a>
@@ -1097,18 +1359,24 @@
         }).join('');
     }
 
-    function removePet(id) {
-        const pet = pets.find(p => p.id === id);
-        if (!pet) return;
-        if (!window.confirm(`Remove ${pet.name} from your profile?`)) return;
-        pets = pets.filter(p => p.id !== id);
-        posts = posts.map(post => post.petId === id ? { ...post, petId: null } : post);
-        delete highlights[String(id)];
-        localStorage.setItem(HIGHLIGHTS_KEY, JSON.stringify(highlights));
+    async function removePet(id, name) {
+        if (!window.confirm(`Remove ${name} from your profile?`)) return;
+
+        const response = await fetch(`/accounts/api/pets/${id}/`, {
+            method: 'DELETE',
+            credentials: 'same-origin',
+            headers: { 'X-CSRFToken': getCookie('csrftoken') }
+        });
+
+        if (!response.ok) {
+            alert('Unable to remove pet.');
+            return;
+        }
+
+        pets = pets.filter(pet => pet.id !== id);
         if (activePetId === id) {
             activePetId = pets[0] ? pets[0].id : null;
         }
-        saveState();
         renderAll();
     }
 
@@ -1116,15 +1384,13 @@
         ['textPetTag', 'photoPetTag', 'lostPetTag'].forEach(selectId => {
             const select = document.getElementById(selectId);
             const previous = select.value;
-            if (selectId === 'lostPetTag') {
-                select.innerHTML = '<option value="">Tag your pet (optional)</option>';
-            } else {
-                select.innerHTML = '<option value="">Tag a pet</option>';
-            }
+            select.innerHTML = selectId === 'lostPetTag'
+                ? '<option value="">Tag your pet (optional)</option>'
+                : '<option value="">Tag a pet</option>';
             pets.forEach(pet => {
                 const option = document.createElement('option');
                 option.value = String(pet.id);
-                option.textContent = `${pet.emoji} ${pet.name}`;
+                option.textContent = `${pet.emoji || 'pet'} ${pet.name}`;
                 select.appendChild(option);
             });
             select.value = previous;
@@ -1133,11 +1399,8 @@
 
     function onLostPetTagChange() {
         const petId = Number(document.getElementById('lostPetTag').value) || null;
-        if (!petId) return;
         const pet = pets.find(item => item.id === petId);
         if (!pet) return;
-
-        // Auto-fill known pet details when user tags one of their pets in lost post.
         document.getElementById('lostName').value = pet.name || '';
         document.getElementById('lostSpecies').value = pet.species || 'Other';
         document.getElementById('lostBreed').value = pet.breed || '';
@@ -1146,20 +1409,20 @@
 
     function statsUpdate() {
         document.getElementById('statPosts').textContent = String(posts.length);
-        document.getElementById('statLost').textContent = String(posts.filter(p => p.type === 'lost').length);
-        document.getElementById('statFound').textContent = String(posts.filter(p => p.type === 'found').length);
+        document.getElementById('statLost').textContent = String(posts.filter(p => p.report_type === 'lost').length);
+        document.getElementById('statFound').textContent = String(posts.filter(p => p.report_type === 'found').length);
     }
 
     function visiblePosts() {
         let list = posts.slice();
         if (currentTab === 'lost') {
-            list = list.filter(post => post.type === 'lost' || post.type === 'found');
+            list = list.filter(post => post.report_type === 'lost' || post.report_type === 'found');
         } else if (currentTab === 'pets') {
-            list = list.filter(post => post.petId !== null);
+            list = list.filter(post => Boolean(findTaggedPet(post)));
         }
 
         if (currentFilter !== 'all') {
-            list = list.filter(post => post.type === currentFilter);
+            list = list.filter(post => post.report_type === currentFilter);
         }
 
         return list;
@@ -1174,7 +1437,7 @@
             return;
         }
 
-        container.innerHTML = list.slice().reverse().map(renderPost).join('');
+        container.innerHTML = list.map(renderPost).join('');
         statsUpdate();
     }
 
@@ -1186,46 +1449,55 @@
     }
 
     function renderPost(post) {
-        const pet = post.petId ? pets.find(p => p.id === post.petId) : null;
-        const liked = likedPosts.has(post.id);
-        const likes = post.likes + (liked ? 1 : 0);
+        const pet = findTaggedPet(post);
+        const postType = post.report_type;
+        const liked = Boolean(post.liked_by_me);
+        const likes = Number(post.like_count || 0);
 
         let body = '';
-        if (post.type === 'text') {
-            body = `<p>${escapeHtml(post.text)}</p>`;
+        if (postType === 'text') {
+            body = `<p>${escapeHtml(post.description || '')}</p>`;
         }
 
-        if (post.type === 'photo') {
-            const imageHtml = post.imageData
-                ? `<img src="${post.imageData}" alt="Post image" style="width: 100%; max-height: 360px; object-fit: cover; border-radius: 12px; border: 1px solid var(--border);">`
-                : '<div style="height: 220px; border-radius: 12px; border: 1px solid var(--border); background: linear-gradient(135deg, var(--warm), #efe2cc); display: flex; align-items: center; justify-content: center; font-size: 4rem;">🐾</div>';
-            body = `${imageHtml}${post.text ? `<p style="margin-top: 8px;">${escapeHtml(post.text)}</p>` : ''}`;
+        if (postType === 'photo') {
+            const imageHtml = post.image
+                ? `<img src="${escapeHtml(post.image)}" alt="Post image" style="width: 100%; max-height: 360px; object-fit: cover; border-radius: 12px; border: 1px solid var(--border);">`
+                : '<div style="height: 220px; border-radius: 12px; border: 1px solid var(--border); background: linear-gradient(135deg, var(--warm), #efe2cc); display: flex; align-items: center; justify-content: center; font-size: 3rem;">Photo</div>';
+            body = `${imageHtml}${post.description ? `<p style="margin-top: 8px;">${escapeHtml(post.description)}</p>` : ''}`;
         }
 
-        if (post.type === 'lost') {
-            const galleryHtml = renderImageGallery(post.lostImages || []);
+        if (postType === 'lost') {
+            const imageHtml = post.image ? `<img src="${escapeHtml(post.image)}" alt="Lost pet" style="width:100%;max-height:220px;object-fit:cover;border-radius:10px;border:1px solid var(--border);">` : '';
+            const claimAction = post.author !== APP_USER
+                ? `<button class="btn-main" style="background: var(--bark); width: 100%; margin-top: 6px;" type="button" onclick="openClaimModal(${post.id})">This pet is mine</button>`
+                : `<div class="small" style="margin-top:6px;"><strong>Status:</strong> ${escapeHtml(post.status || 'pending')}${post.admin_note ? ` | Note: ${escapeHtml(post.admin_note)}` : ''}</div>`;
             body = `
                 <div style="background: #faeee8; border: 1px solid #e8ac9a; border-radius: 12px; padding: 10px;">
-                    <strong style="color: var(--rust);">Lost: ${escapeHtml(post.lostName || 'Unknown')}</strong>
-                    <p style="margin: 7px 0;">${escapeHtml(post.lostSpecies || '')}${post.lostBreed ? ` • ${escapeHtml(post.lostBreed)}` : ''}${post.lostColor ? ` • ${escapeHtml(post.lostColor)}` : ''}</p>
-                    <p style="margin: 7px 0;"><strong>Last Seen:</strong> ${escapeHtml(post.lostLocation || 'N/A')} ${post.lostDate ? `(${escapeHtml(post.lostDate)})` : ''}</p>
-                    ${galleryHtml}
-                    ${post.lostDesc ? `<p style="margin: 7px 0;">${escapeHtml(post.lostDesc)}</p>` : ''}
-                    <button class="btn-main" style="background: var(--rust); width: 100%; margin-top: 6px;" type="button" onclick="contactNumber('${escapeHtml(post.lostContact || '')}')">Contact ${escapeHtml(post.lostContact || '')}</button>
+                    <strong style="color: var(--rust);">Lost: ${escapeHtml(post.name || 'Unknown')}</strong>
+                    <p style="margin: 7px 0;">${escapeHtml(post.type || '')}${post.breed ? ` • ${escapeHtml(post.breed)}` : ''}${post.color ? ` • ${escapeHtml(post.color)}` : ''}</p>
+                    <p style="margin: 7px 0;"><strong>Last Seen:</strong> ${escapeHtml(post.location || 'N/A')}</p>
+                    ${imageHtml}
+                    ${post.description ? `<p style="margin: 7px 0;">${escapeHtml(post.description)}</p>` : ''}
+                    <button class="btn-main" style="background: var(--rust); width: 100%; margin-top: 6px;" type="button" onclick="contactNumber('${escapeHtml(post.contact_info || '')}')">Contact ${escapeHtml(post.contact_info || '')}</button>
+                    ${claimAction}
                 </div>
             `;
         }
 
-        if (post.type === 'found') {
-            const galleryHtml = renderImageGallery(post.foundImages || []);
+        if (postType === 'found') {
+            const imageHtml = post.image ? `<img src="${escapeHtml(post.image)}" alt="Found pet" style="width:100%;max-height:220px;object-fit:cover;border-radius:10px;border:1px solid var(--border);">` : '';
+            const claimAction = post.author !== APP_USER
+                ? `<button class="btn-main" style="background: var(--bark); width: 100%; margin-top: 6px;" type="button" onclick="openClaimModal(${post.id})">This pet is mine</button>`
+                : `<div class="small" style="margin-top:6px;"><strong>Status:</strong> ${escapeHtml(post.status || 'pending')}${post.admin_note ? ` | Note: ${escapeHtml(post.admin_note)}` : ''}</div>`;
             body = `
                 <div style="background: #edf5ed; border: 1px solid #8bad89; border-radius: 12px; padding: 10px;">
-                    <strong style="color: var(--sage);">Found ${escapeHtml(post.foundSpecies || 'pet')}</strong>
-                    <p style="margin: 7px 0;">${escapeHtml(post.foundColor || '')}</p>
-                    <p style="margin: 7px 0;"><strong>Location:</strong> ${escapeHtml(post.foundLocation || 'N/A')} ${post.foundDate ? `(${escapeHtml(post.foundDate)})` : ''}</p>
-                    ${galleryHtml}
-                    ${post.foundDesc ? `<p style="margin: 7px 0;">${escapeHtml(post.foundDesc)}</p>` : ''}
-                    <button class="btn-main" style="background: var(--sage); width: 100%; margin-top: 6px;" type="button" onclick="contactNumber('${escapeHtml(post.foundContact || '')}')">Contact ${escapeHtml(post.foundContact || '')}</button>
+                    <strong style="color: var(--sage);">Found ${escapeHtml(post.type || 'pet')}</strong>
+                    <p style="margin: 7px 0;">${escapeHtml(post.color || '')}</p>
+                    <p style="margin: 7px 0;"><strong>Location:</strong> ${escapeHtml(post.location || 'N/A')}</p>
+                    ${imageHtml}
+                    ${post.description ? `<p style="margin: 7px 0;">${escapeHtml(post.description)}</p>` : ''}
+                    <button class="btn-main" style="background: var(--sage); width: 100%; margin-top: 6px;" type="button" onclick="contactNumber('${escapeHtml(post.contact_info || '')}')">Contact ${escapeHtml(post.contact_info || '')}</button>
+                    ${claimAction}
                 </div>
             `;
         }
@@ -1233,17 +1505,16 @@
         return `
             <article class="card post" id="post-${post.id}">
                 <div class="post-head">
-                    <div class="pet-avatar" style="width: 40px; height: 40px;">${pet ? escapeHtml(pet.emoji) : '👤'}</div>
+                    <div class="pet-avatar" style="width: 40px; height: 40px;">${pet ? escapeHtml(pet.emoji || 'pet') : 'U'}</div>
                     <div style="flex: 1; min-width: 0;">
                         <div style="font-weight: 700;">${escapeHtml(post.author)} ${pet ? `<span class="tag">${escapeHtml(pet.name)}</span>` : ''}</div>
-                        <div class="small" style="display: flex; gap: 6px; align-items: center; margin-top: 2px;">${postBadge(post.type)}</div>
+                        <div class="small" style="display: flex; gap: 6px; align-items: center; margin-top: 2px;">${postBadge(postType)}</div>
                     </div>
-                    <div class="small">${timeAgo(post.createdAt)}</div>
+                    <div class="small">${timeAgo(post.created_at)}</div>
                 </div>
                 <div class="post-body">${body}</div>
                 <div class="post-footer">
-                    <button class="react ${liked ? 'liked' : ''}" type="button" onclick="toggleLike(${post.id})">${liked ? '❤️' : '🤍'} ${likes}</button>
-                    <button class="react" type="button">💬 ${post.comments || 0}</button>
+                    <button class="react ${liked ? 'liked' : ''}" type="button" onclick="toggleLike(${post.id})">${liked ? 'Liked' : 'Like'} ${likes}</button>
                     <button class="react" type="button" onclick="copyPostLink(${post.id})">Share</button>
                 </div>
             </article>
@@ -1265,15 +1536,13 @@
         document.querySelectorAll('.ntab').forEach(btn => btn.classList.remove('active'));
         el.classList.add('active');
         currentFilter = 'all';
-        document.querySelectorAll('.filter-btn').forEach((btn, index) => {
-            btn.classList.toggle('active', index === 0);
-        });
+        document.querySelectorAll('.filters .filter-btn').forEach((btn, index) => btn.classList.toggle('active', index === 0));
         renderPosts();
     }
 
     function filterPosts(filterName, el) {
         currentFilter = filterName;
-        document.querySelectorAll('.filter-btn').forEach(btn => btn.classList.remove('active'));
+        document.querySelectorAll('.filters .filter-btn').forEach(btn => btn.classList.remove('active'));
         el.classList.add('active');
         renderPosts();
     }
@@ -1283,187 +1552,243 @@
         if (!file) return;
         const reader = new FileReader();
         reader.onload = e => {
-            const img = document.getElementById('photoPreview');
-            img.src = e.target.result;
+            document.getElementById('photoPreview').src = e.target.result;
             document.getElementById('photoPreviewBox').classList.remove('hidden');
         };
         reader.readAsDataURL(file);
     }
 
-    function renderPendingPreview(type) {
-        const isLost = type === 'lost';
-        const images = isLost ? pendingLostImages : pendingFoundImages;
-        const box = document.getElementById(isLost ? 'lostPreviewBox' : 'foundPreviewBox');
-        box.innerHTML = '';
-
-        if (!images.length) {
-            box.classList.add('hidden');
-            return;
-        }
-
-        images.forEach(src => {
-            const img = document.createElement('img');
-            img.src = src;
-            img.alt = 'Preview image';
-            box.appendChild(img);
-        });
-
-        box.classList.remove('hidden');
-    }
-
-    function clearPendingImages(type) {
-        if (type === 'lost') {
-            pendingLostImages = [];
-            document.getElementById('lostPhotos').value = '';
-            renderPendingPreview('lost');
-            return;
-        }
-
-        pendingFoundImages = [];
-        document.getElementById('foundPhotos').value = '';
-        renderPendingPreview('found');
-    }
-
-    async function previewMultiImages(event, previewBoxId) {
-        const files = event.target.files;
-        if (!files || !files.length) return;
-
-        const incomingImages = (await readFilesAsDataUrls(files)).filter(Boolean);
-        if (previewBoxId === 'lostPreviewBox') {
-            pendingLostImages = pendingLostImages.concat(incomingImages);
-            renderPendingPreview('lost');
-        } else {
-            pendingFoundImages = pendingFoundImages.concat(incomingImages);
-            renderPendingPreview('found');
-        }
-
-        // Allow selecting the same file again in next add-more action.
-        event.target.value = '';
-    }
-
-    function readFilesAsDataUrls(fileList) {
-        const files = Array.from(fileList || []);
-        return Promise.all(files.map(file => new Promise(resolve => {
-            const reader = new FileReader();
-            reader.onload = e => resolve(String(e.target.result || ''));
-            reader.onerror = () => resolve('');
-            reader.readAsDataURL(file);
-        })));
-    }
-
-    function renderImageGallery(images) {
-        if (!Array.isArray(images) || !images.length) return '';
-        return `<div class="post-gallery">${images.map(src => `<img src="${src}" alt="Post image">`).join('')}</div>`;
-    }
-
-    function getCookie(name) {
-        const cookieValue = document.cookie
-            .split(';')
-            .map(cookie => cookie.trim())
-            .find(cookie => cookie.startsWith(`${name}=`));
-
-        if (!cookieValue) {
-            return '';
-        }
-
-        return decodeURIComponent(cookieValue.split('=').slice(1).join('='));
-    }
-
     async function submitPost(type) {
-    const formData = new FormData();
-    const csrftoken = getCookie('csrftoken');
+        const csrftoken = getCookie('csrftoken');
+        if (!csrftoken) {
+            alert('Missing CSRF token. Refresh the page and try again.');
+            return;
+        }
 
-    if (!csrftoken) {
-        alert('Your session is missing a CSRF token. Refresh the page and try again.');
-        return;
-    }
+        const formData = new FormData();
+        formData.append('report_type', type);
 
-    // Common fields for all reports
-    formData.append('report_type', type);
+        if (type === 'text') {
+            const petId = Number(document.getElementById('textPetTag').value) || null;
+            const pet = pets.find(item => item.id === petId);
+            const text = document.getElementById('textInput').value.trim();
+            if (!text) return alert('Write an update first.');
+            formData.append('description', text);
+            formData.append('type', pet ? pet.species : 'Pet');
+            formData.append('name', pet ? pet.name : '');
+            formData.append('breed', pet ? pet.breed : '');
+            formData.append('color', pet ? pet.color : '');
+            formData.append('location', 'Community Feed');
+            formData.append('contact_info', 'Not provided');
+        }
 
-    if (type === 'lost') {
-        const name = document.getElementById('lostName').value;
-        const species = document.getElementById('lostSpecies').value;
-        const location = document.getElementById('lostLocation').value;
-        const contact = document.getElementById('lostContact').value;
-        const files = document.getElementById('lostPhotos').files;
+        if (type === 'photo') {
+            const petId = Number(document.getElementById('photoPetTag').value) || null;
+            const pet = pets.find(item => item.id === petId);
+            const caption = document.getElementById('photoCaption').value.trim();
+            const file = document.getElementById('photoFile').files[0];
+            if (!file && !caption) return alert('Add photo or caption.');
+            formData.append('description', caption);
+            formData.append('type', pet ? pet.species : 'Pet');
+            formData.append('name', pet ? pet.name : '');
+            formData.append('breed', pet ? pet.breed : '');
+            formData.append('color', pet ? pet.color : '');
+            formData.append('location', 'Community Feed');
+            formData.append('contact_info', 'Not provided');
+            if (file) formData.append('image', file);
+        }
 
-        if (!name || !location || !contact) return alert("Please fill required fields.");
+        if (type === 'lost') {
+            const name = document.getElementById('lostName').value.trim();
+            const species = document.getElementById('lostSpecies').value;
+            const location = document.getElementById('lostLocation').value.trim();
+            const contact = document.getElementById('lostContact').value.trim();
+            const file = document.getElementById('lostPhotos').files[0];
+            if (!name || !location || !contact) return alert('Please fill required fields.');
 
-        formData.append('name', name);
-        formData.append('type', species);
-        formData.append('breed', document.getElementById('lostBreed').value);
-        formData.append('color', document.getElementById('lostColor').value);
-        formData.append('location', location);
-        formData.append('contact_info', contact);
-        formData.append('description', document.getElementById('lostDesc').value);
-        
-        if (files.length > 0) formData.append('image', files[0]);
+            formData.append('name', name);
+            formData.append('type', species);
+            formData.append('breed', document.getElementById('lostBreed').value.trim());
+            formData.append('color', document.getElementById('lostColor').value.trim());
+            formData.append('location', location);
+            formData.append('contact_info', contact);
+            formData.append('description', document.getElementById('lostDesc').value.trim());
+            if (file) formData.append('image', file);
+        }
 
-    } else if (type === 'found') {
-        const species = document.getElementById('foundSpecies').value;
-        const location = document.getElementById('foundLocation').value;
-        const contact = document.getElementById('foundContact').value;
-        const files = document.getElementById('foundPhotos').files;
+        if (type === 'found') {
+            const species = document.getElementById('foundSpecies').value;
+            const location = document.getElementById('foundLocation').value.trim();
+            const contact = document.getElementById('foundContact').value.trim();
+            const file = document.getElementById('foundPhotos').files[0];
+            if (!location || !contact) return alert('Please fill location and contact.');
 
-        if (!location || !contact) return alert("Please fill location and contact.");
+            formData.append('name', '');
+            formData.append('type', species);
+            formData.append('breed', '');
+            formData.append('color', document.getElementById('foundColor').value.trim());
+            formData.append('location', location);
+            formData.append('contact_info', contact);
+            formData.append('description', document.getElementById('foundDesc').value.trim());
+            if (file) formData.append('image', file);
+        }
 
-        formData.append('type', species);
-        formData.append('color', document.getElementById('foundColor').value);
-        formData.append('location', location);
-        formData.append('contact_info', contact);
-        formData.append('description', document.getElementById('foundDesc').value);
-        
-        if (files.length > 0) formData.append('image', files[0]);
-    }
-
-    try {
         const response = await fetch('/accounts/api/reports/', {
             method: 'POST',
             credentials: 'same-origin',
-            headers: {
-                'X-CSRFToken': csrftoken
-                // Note: Do NOT set 'Content-Type'. FormData sets it automatically with the boundary.
-            },
+            headers: { 'X-CSRFToken': csrftoken },
             body: formData
         });
 
-        if (response.ok) {
-            alert("Report submitted successfully! Waiting for admin approval.");
-            location.reload(); // Refresh to see the new post in the feed
-        } else {
+        if (!response.ok) {
             const errorData = await response.json().catch(() => ({}));
-            console.error("Submission Error:", errorData);
-            alert(errorData.detail || "Failed to submit report. Check console for details.");
+            alert(errorData.detail || 'Failed to submit report.');
+            return;
         }
-    } catch (error) {
-        console.error("Network Error:", error);
-    }
-}
 
-    function toggleLike(postId) {
-        if (likedPosts.has(postId)) {
-            likedPosts.delete(postId);
-        } else {
-            likedPosts.add(postId);
+        clearComposer(type);
+        await loadFromApi();
+    }
+
+    function clearComposer(type) {
+        if (type === 'text') {
+            document.getElementById('textInput').value = '';
+            document.getElementById('textPetTag').value = '';
         }
-        saveState();
+        if (type === 'photo') {
+            document.getElementById('photoCaption').value = '';
+            document.getElementById('photoFile').value = '';
+            document.getElementById('photoPreviewBox').classList.add('hidden');
+            document.getElementById('photoPetTag').value = '';
+        }
+        if (type === 'lost') {
+            ['lostName', 'lostBreed', 'lostColor', 'lostLocation', 'lostDate', 'lostDesc', 'lostContact'].forEach(id => {
+                document.getElementById(id).value = '';
+            });
+            document.getElementById('lostPhotos').value = '';
+            document.getElementById('lostPreviewBox').innerHTML = '';
+            document.getElementById('lostPreviewBox').classList.add('hidden');
+            document.getElementById('lostPetTag').value = '';
+        }
+        if (type === 'found') {
+            ['foundColor', 'foundLocation', 'foundDate', 'foundDesc', 'foundContact'].forEach(id => {
+                document.getElementById(id).value = '';
+            });
+            document.getElementById('foundPhotos').value = '';
+            document.getElementById('foundPreviewBox').innerHTML = '';
+            document.getElementById('foundPreviewBox').classList.add('hidden');
+        }
+    }
+
+    async function toggleLike(postId) {
+        const response = await fetch(`/accounts/api/reports/${postId}/like/`, {
+            method: 'POST',
+            credentials: 'same-origin',
+            headers: { 'X-CSRFToken': getCookie('csrftoken') }
+        });
+
+        if (!response.ok) {
+            alert('Unable to update like.');
+            return;
+        }
+
+        const data = await response.json();
+        posts = posts.map(post => {
+            if (post.id !== postId) return post;
+            return {
+                ...post,
+                liked_by_me: Boolean(data.liked),
+                like_count: Number(data.like_count || 0),
+            };
+        });
         renderPosts();
     }
 
     function copyPostLink(postId) {
         const link = `${window.location.origin}${window.location.pathname}#post-${postId}`;
-        navigator.clipboard.writeText(link)
-            .then(() => alert('Post link copied.'))
-            .catch(() => alert('Unable to copy link.'));
+        navigator.clipboard.writeText(link).then(() => alert('Post link copied.')).catch(() => alert('Unable to copy link.'));
     }
 
     function contactNumber(number) {
-        if (!number) {
-            alert('No contact number provided for this post.');
+        if (!number) return alert('No contact number provided for this post.');
+        window.location.href = `tel:${number}`;
+    }
+
+    function getApiErrorMessage(errorData, fallback) {
+        if (!errorData || typeof errorData !== 'object') return fallback;
+        if (typeof errorData.detail === 'string' && errorData.detail.trim()) return errorData.detail;
+        if (Array.isArray(errorData.non_field_errors) && errorData.non_field_errors.length) {
+            return String(errorData.non_field_errors[0]);
+        }
+
+        for (const value of Object.values(errorData)) {
+            if (Array.isArray(value) && value.length) return String(value[0]);
+            if (typeof value === 'string' && value.trim()) return value;
+        }
+        return fallback;
+    }
+
+    function openClaimModal(reportId) {
+        const report = posts.find(item => item.id === reportId);
+        if (!report) {
+            alert('Report not found.');
             return;
         }
-        window.location.href = `tel:${number}`;
+        selectedReportForClaim = report;
+        document.getElementById('claimPetName').value = report.name || '';
+        document.getElementById('claimDetails').value = '';
+        document.getElementById('claimProof').value = '';
+        document.getElementById('claimMessage').value = '';
+        document.getElementById('claimModal').classList.add('show');
+    }
+
+    function closeClaimModal() {
+        document.getElementById('claimModal').classList.remove('show');
+    }
+
+    function closeClaimModalOutside(event) {
+        if (event.target.id === 'claimModal') closeClaimModal();
+    }
+
+    async function submitClaim() {
+        if (!selectedReportForClaim) {
+            alert('Choose a report first.');
+            return;
+        }
+
+        const payload = {
+            report: selectedReportForClaim.id,
+            pet_name: document.getElementById('claimPetName').value.trim(),
+            pet_details: document.getElementById('claimDetails').value.trim(),
+            proof: document.getElementById('claimProof').value.trim(),
+            initial_message: document.getElementById('claimMessage').value.trim(),
+        };
+
+        if (!payload.pet_name || !payload.pet_details || !payload.proof) {
+            alert('Please complete all claim fields.');
+            return;
+        }
+
+        const response = await fetch('/accounts/api/claims/', {
+            method: 'POST',
+            credentials: 'same-origin',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': getCookie('csrftoken')
+            },
+            body: JSON.stringify(payload)
+        });
+
+        if (!response.ok) {
+            const errorData = await response.json().catch(() => ({}));
+            alert(getApiErrorMessage(errorData, 'Could not send claim.'));
+            return;
+        }
+
+        closeClaimModal();
+        await loadMyClaims();
+        openClaimInbox();
+        alert('Claim sent to admin.');
     }
 
     function openModal() {
@@ -1475,27 +1800,21 @@
     }
 
     function closeModalOutside(event) {
-        if (event.target.id === 'petModal') {
-            closeModal();
-        }
+        if (event.target.id === 'petModal') closeModal();
     }
 
     function pickEmoji(event, element) {
         event.preventDefault();
-        selectedEmoji = element.dataset.emoji || '🐶';
+        selectedEmoji = element.dataset.emoji || 'pet';
         document.querySelectorAll('.emoji-opt').forEach(btn => btn.classList.remove('selected'));
         element.classList.add('selected');
     }
 
-    function savePet() {
+    async function savePet() {
         const name = document.getElementById('newName').value.trim();
-        if (!name) {
-            alert('Pet name is required.');
-            return;
-        }
+        if (!name) return alert('Pet name is required.');
 
-        const pet = {
-            id: Date.now(),
+        const payload = {
             name,
             species: document.getElementById('newSpecies').value,
             breed: document.getElementById('newBreed').value.trim(),
@@ -1508,14 +1827,26 @@
             emoji: selectedEmoji
         };
 
-        pets.push(pet);
-        activePetId = pet.id;
+        const response = await fetch('/accounts/api/pets/', {
+            method: 'POST',
+            credentials: 'same-origin',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': getCookie('csrftoken')
+            },
+            body: JSON.stringify(payload)
+        });
+
+        if (!response.ok) {
+            alert('Unable to save pet.');
+            return;
+        }
+
         ['newName', 'newBreed', 'newAge', 'newColor', 'newWeight', 'newChip', 'newNotes'].forEach(id => {
             document.getElementById(id).value = '';
         });
-        saveState();
         closeModal();
-        renderAll();
+        await loadFromApi();
     }
 
     function renderAll() {
@@ -1525,10 +1856,42 @@
         renderPosts();
     }
 
+    async function previewMultiImages(event, previewBoxId) {
+        const files = Array.from(event.target.files || []);
+        if (!files.length) return;
+        const box = document.getElementById(previewBoxId);
+        box.innerHTML = '';
+
+        await Promise.all(files.map(file => new Promise(resolve => {
+            const reader = new FileReader();
+            reader.onload = e => {
+                const img = document.createElement('img');
+                img.src = String(e.target.result || '');
+                img.alt = 'Preview image';
+                box.appendChild(img);
+                resolve();
+            };
+            reader.onerror = () => resolve();
+            reader.readAsDataURL(file);
+        })));
+
+        box.classList.remove('hidden');
+    }
+
+    function clearPendingImages(type) {
+        const isLost = type === 'lost';
+        const fileInput = document.getElementById(isLost ? 'lostPhotos' : 'foundPhotos');
+        const box = document.getElementById(isLost ? 'lostPreviewBox' : 'foundPreviewBox');
+        fileInput.value = '';
+        box.innerHTML = '';
+        box.classList.add('hidden');
+    }
+
     document.getElementById('userAvatar').textContent = getInitials(APP_USER);
     document.getElementById('lostPetTag').addEventListener('change', onLostPetTagChange);
-    loadState();
-    renderAll();
+    loadFromApi().catch(() => {
+        document.getElementById('postsContainer').innerHTML = '<div class="empty"><p style="margin:0;">Unable to load live data. Refresh and try again.</p></div>';
+    });
 </script>
 </body>
 </html>

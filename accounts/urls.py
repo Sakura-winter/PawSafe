@@ -1,5 +1,25 @@
 from django.urls import path
-from .views import RegisterView, LoginView, register_page, login_page, dashboard_page, user_page, PetReportListCreateView
+from .views import (
+    RegisterView,
+    LoginView,
+    register_page,
+    login_page,
+    dashboard_page,
+    user_page,
+    admin_requests_page,
+    PetReportListCreateView,
+    PetListCreateView,
+    PetDetailView,
+    AdminReportListView,
+    AdminReportDecisionView,
+    ClaimRequestListCreateView,
+    ClaimMessageListCreateView,
+    AdminClaimDecisionView,
+    NotificationListView,
+    NotificationReadView,
+    NotificationBulkActionView,
+    PetReportLikeToggleView,
+)
 from rest_framework_simplejwt.views import TokenObtainPairView
 
 urlpatterns = [
@@ -9,6 +29,18 @@ urlpatterns = [
     path('register-page/', register_page),
     path('dashboard/', dashboard_page, name='dashboard'),
     path('user/', user_page, name='user_page'),
+    path('admin-requests/', admin_requests_page, name='admin_requests_page'),
     path('login-page/', login_page),
     path('api/reports/', PetReportListCreateView.as_view(), name='pet-report'),
+    path('api/reports/<int:report_id>/like/', PetReportLikeToggleView.as_view(), name='pet-report-like-toggle'),
+    path('api/pets/', PetListCreateView.as_view(), name='pet-list-create'),
+    path('api/pets/<int:pk>/', PetDetailView.as_view(), name='pet-detail'),
+    path('api/admin/reports/', AdminReportListView.as_view(), name='admin-report-list'),
+    path('api/admin/reports/<int:pk>/decision/', AdminReportDecisionView.as_view(), name='admin-report-decision'),
+    path('api/claims/', ClaimRequestListCreateView.as_view(), name='claim-list-create'),
+    path('api/claims/<int:claim_id>/messages/', ClaimMessageListCreateView.as_view(), name='claim-message-list-create'),
+    path('api/admin/claims/<int:claim_id>/decision/', AdminClaimDecisionView.as_view(), name='admin-claim-decision'),
+    path('api/notifications/', NotificationListView.as_view(), name='notification-list'),
+    path('api/notifications/bulk/', NotificationBulkActionView.as_view(), name='notification-bulk-action'),
+    path('api/notifications/<int:pk>/read/', NotificationReadView.as_view(), name='notification-read'),
 ]
