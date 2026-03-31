@@ -192,3 +192,7 @@ class ClaimRequestSerializer(serializers.ModelSerializer):
             if ClaimRequest.objects.filter(report=report, claimant=user).exists():
                 raise serializers.ValidationError({'detail': 'You already raised a claim for this post.'})
         return attrs
+
+    def create(self, validated_data):
+        validated_data.pop('initial_message', None)
+        return super().create(validated_data)

@@ -4,7 +4,7 @@ from django.urls import reverse
 from rest_framework import status
 from rest_framework.test import APIClient
 
-from .models import PetReport, Notification
+from .models import PetReport, Notification, ClaimRequest, ClaimMessage
 
 
 class PetReportApiTests(TestCase):
@@ -129,3 +129,40 @@ class LikePersistenceTests(TestCase):
 		self.assertIsNotNone(item)
 		self.assertEqual(item['like_count'], 1)
 		self.assertTrue(item['liked_by_me'])
+
+
+class ClaimCreationTests(TestCase):
+	def setUp(self):
+		self.client = APIClient()
+		self.claimant = User.objects.create_user(username='claimant1', password='claimpass123')
+		self.report_owner = User.objects.create_user(username='owner1', password='ownerpass123')
+		self.client.force_authenticate(user=self.claimant)
+		self.report = PetReport.objects.create(
+			author=self.report_owner,
+			report_type='lost',
+			type='Cat',
+			name='Whiskers',
+			location='Near school',
+			contact_info='9999999999',
+			description='Grey cat',
+			status='pending',
+		)
+
+	def test_create_claim_with_initial_message(self):
+		response = self.client.post(
+			reverse('claim-list-create'),
+			{
+				'report': self.report.id,
+				'pet_name': 'Whiskers',
+				'pet_details': 'Has cut mark on left ear',
+				'proof': 'Vet card and old photos',
+				'initial_message': 'Please verify quickly',
+			},
+			format='json',
+		)
+
+		self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+		claim = ClaimRequest.objects.get(report=self.report, claimant=self.claimant)
+		first_message = ClaimMessage.objects.filter(claim=claim).first()
+		self.assertIsNotNone(first_message)
+		self.assertEqual(first_message.message, 'Please verify quickly')
