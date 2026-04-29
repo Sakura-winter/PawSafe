@@ -54,3 +54,19 @@ Thumbs.db
 
 # Jupyter
 .ipynb_checkpoints/
+
+# Maven / Java build artifacts
+target/
+pawsafe-ci/target/
+
+# Docker / compose overrides and local build caches
+.docker/
+docker-compose.override.yml
+
+# Runtime artifacts
+*.pid
+*.sock
+*.sqlite3
+*.db
+
+
