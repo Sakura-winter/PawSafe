@@ -121,24 +121,58 @@ Access the application at `http://localhost:8000`
 ### Workflow Diagram
 
 ```mermaid
-graph LR
-    A[Developer Commits Code] --> B[Git Push to Repository]
-    B --> C[CI/CD Pipeline Triggered]
-    C --> D[Maven Test Phase]
-    D --> E{Tests Pass?}
-    E -->|No| F[Build Failed - Notify Developer]
-    E -->|Yes| G[Docker Image Build]
-    G --> H[Push to Registry]
-    H --> I[Deploy to Container Orchestration]
-    I --> J[Application Running]
+graph TD
+    A["👨‍💻 Developer"] -->|git push| B["🐙 GitHub"]
+    B -->|webhook trigger| C["GitHub Actions CI"]
     
-    style A fill:#e1f5ff
-    style C fill:#fff3e0
-    style D fill:#f3e5f5
-    style G fill:#e8f5e9
-    style J fill:#c8e6c9
-    style F fill:#ffcdd2
+    C -->|Install deps| D["Python 3.12 + Java 17"]
+    C -->|Run tests| E["Django Tests"]
+    E -->|SQLite in-memory| F["CI=true"]
+    C -->|Maven test| G["mvn test<br/>Maven runs Django"]
+    
+    G -->|Tests pass| H["GitHub Webhook<br/>POST to ngrok URL"]
+    
+    H -->|Tunnel| I["ngrok<br/>Internet → localhost"]
+    
+    I -->|Webhook trigger| J["🔧 Jenkins CD Pipeline"]
+    
+    J -->|git pull| K["Latest Code"]
+    J -->|Build & up| L["docker compose up --build"]
+    
+    L -->|Wait ready| M["⏳ DB Ready Check"]
+    J -->|Migrate| N["manage.py migrate"]
+    
+    M --> O["🐳 Docker Compose"]
+    N --> O
+    
+    O -->|Container 1| P["Web: Django<br/>Port 8000"]
+    O -->|Container 2| Q["DB: MySQL 8<br/>Port 3306"]
+    
+    P --> R["✅ Application Live"]
+    Q --> R
+    
+    R -->|Ready| S["localhost:8000<br/>🐾 PawSafe Live"]
+    
+    style A fill:#e8f4f8
+    style B fill:#1e3a8a
+    style C fill:#1e3a8a
+    style H fill:#78350f
+    style I fill:#78350f
+    style J fill:#7c2d12
+    style O fill:#064e3b
+    style S fill:#15803d
+    style G fill:#5b7c99
 ```
+
+### Pipeline Stages Explained
+
+| Stage | Tool | Purpose |
+|-------|------|---------|
+| **CI - Test & Validate** | GitHub Actions | Automated testing on every push |
+| **Webhook/Tunnel** | GitHub Webhook + ngrok | Secure communication from cloud to local |
+| **CD - Build & Deploy** | Jenkins | Automated deployment pipeline |
+| **Containerization** | Docker Compose | Spin up Django + MySQL services |
+| **Live App** | Docker | Application running and accessible |
 
 ### Local Development Testing
 
